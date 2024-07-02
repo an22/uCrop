@@ -14,7 +14,6 @@ import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -24,16 +23,16 @@ import com.yalantis.ucrop.view.UCropView;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.nio.channels.FileChannel;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Locale;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
 import static android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION;
@@ -107,8 +106,11 @@ public class ResultActivity extends BaseActivity {
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         switch (requestCode) {
             case REQUEST_STORAGE_WRITE_ACCESS_PERMISSION:
+            case REQUEST_NOTIFICATION_PERMISSION:
                 if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     saveCroppedImage();
+                } else {
+                    Toast.makeText(this, R.string.permission_denied_error, Toast.LENGTH_LONG).show();
                 }
                 break;
             default:
@@ -117,11 +119,16 @@ public class ResultActivity extends BaseActivity {
     }
 
     private void saveCroppedImage() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P && ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 != PackageManager.PERMISSION_GRANTED) {
             requestPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE,
                     getString(R.string.permission_write_storage_rationale),
                     REQUEST_STORAGE_WRITE_ACCESS_PERMISSION);
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+            requestPermission(Manifest.permission.POST_NOTIFICATIONS,
+                    getString(R.string.permission_post_notification_rationale),
+                    REQUEST_NOTIFICATION_PERMISSION);
         } else {
             Uri imageUri = getIntent().getData();
             if (imageUri != null && imageUri.getScheme().equals("file")) {
@@ -138,31 +145,20 @@ public class ResultActivity extends BaseActivity {
     }
 
     private void copyFileToDownloads(Uri croppedFileUri) throws Exception {
-        String downloadsDirectoryPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();
-        String filename = String.format("%d_%s", Calendar.getInstance().getTimeInMillis(), croppedFileUri.getLastPathSegment());
-
-        File saveFile = new File(downloadsDirectoryPath, filename);
-
-        FileInputStream inStream = new FileInputStream(new File(croppedFileUri.getPath()));
-        FileOutputStream outStream = new FileOutputStream(saveFile);
-        FileChannel inChannel = inStream.getChannel();
-        FileChannel outChannel = outStream.getChannel();
-        inChannel.transferTo(0, inChannel.size(), outChannel);
-        inStream.close();
-        outStream.close();
-
-        showNotification(saveFile);
-        Toast.makeText(this, R.string.notification_image_saved, Toast.LENGTH_SHORT).show();
-        finish();
+        String filename = String.format(Locale.getDefault(), "%d_%s", Calendar.getInstance().getTimeInMillis(), croppedFileUri.getLastPathSegment());
+        Uri uri = ImageUtils.saveImageToGallery(this, new FileInputStream(croppedFileUri.getPath()), filename);
+        if (uri != null) {
+            showNotification(uri);
+            Toast.makeText(this, R.string.notification_image_saved, Toast.LENGTH_SHORT).show();
+            finish();
+        } else {
+            Toast.makeText(this, R.string.toast_unexpected_error, Toast.LENGTH_SHORT).show();
+        }
     }
 
-    private void showNotification(@NonNull File file) {
+    private void showNotification(@NonNull Uri fileUri) {
         Intent intent = new Intent(Intent.ACTION_VIEW);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        Uri fileUri = FileProvider.getUriForFile(
-                this,
-                getString(R.string.file_provider_authorities),
-                file);
 
         intent.setDataAndType(fileUri, "image/*");
 
@@ -193,7 +189,7 @@ public class ResultActivity extends BaseActivity {
                 .setTicker(getString(R.string.notification_image_saved))
                 .setSmallIcon(R.drawable.ic_done)
                 .setOngoing(false)
-                .setContentIntent(PendingIntent.getActivity(this, 0, intent, 0))
+                .setContentIntent(PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT))
                 .setAutoCancel(true);
         if (notificationManager != null) {
             notificationManager.notify(DOWNLOAD_NOTIFICATION_ID_DONE, notificationBuilder.build());

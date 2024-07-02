@@ -2,14 +2,18 @@ apply plugin: 'com.android.library'
 apply from: '../mavenpush.gradle'
 
 android {
-    compileSdk 33
+    compileSdk 34
     defaultConfig {
         minSdkVersion 14
-        targetSdkVersion 33
+        targetSdkVersion 34
         versionCode 27
         versionName "2.2.9-native"
+        namespace "com.yalantis.ucrop"
 
         vectorDrawables.useSupportLibrary = true
+    }
+    buildFeatures {
+        buildConfig = true
     }
     buildTypes {
         release {

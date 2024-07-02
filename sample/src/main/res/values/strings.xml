@@ -36,8 +36,10 @@
     <string name="format_max_cropped_image_size_resolution">Too big resolution</string>
 
     <string name="permission_title_rationale">Permission needed</string>
+    <string name="permission_denied_error">Permission denied</string>
     <string name="permission_read_storage_rationale">Storage read permission is needed to pick files.</string>
     <string name="permission_write_storage_rationale">Storage write permission is needed to save the image.</string>
+    <string name="permission_post_notification_rationale">Notification permission is needed to post the image download result notification.</string>
 
     <string name="toast_cannot_retrieve_selected_image">Cannot retrieve selected image</string>
     <string name="toast_cannot_retrieve_cropped_image">Cannot retrieve cropped image</string>
