@@ -15,6 +15,7 @@ public class BaseActivity extends AppCompatActivity {
 
     protected static final int REQUEST_STORAGE_READ_ACCESS_PERMISSION = 101;
     protected static final int REQUEST_STORAGE_WRITE_ACCESS_PERMISSION = 102;
+    protected static final int REQUEST_NOTIFICATION_PERMISSION = 103;
 
     private AlertDialog mAlertDialog;
 

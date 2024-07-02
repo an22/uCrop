@@ -116,10 +116,14 @@ public class SampleActivity extends BaseActivity implements UCropFragmentCallbac
             } else if (requestCode == DESTINATION_IMAGE_FILE_REQUEST_CODE) {
                 destinationUri = data.getData();
                 mFileDestinationTextView.setText(destinationUri.toString());
+            } else {
+                super.onActivityResult(requestCode, resultCode, data);
             }
         }
         if (resultCode == UCrop.RESULT_ERROR) {
             handleCropError(data);
+        } else {
+            super.onActivityResult(requestCode, resultCode, data);
         }
     }
 

@@ -25,7 +25,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 
 /**
- * Created by Oleksii Shliama (https://github.com/shliama).
+ * Created by (<a href="https://github.com/shliama">Oleksii Shliama</a>).
  * <p/>
  * Builder class to ease Intent setup.
  */
