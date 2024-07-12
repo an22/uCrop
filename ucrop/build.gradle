@@ -43,11 +43,11 @@ android {
         create("native") {
             dimension = "processing_type"
             versionNameSuffix = "-native"
-            buildConfigField("String", "type", '"NATIVE"')
+            buildConfigField("String", "TYPE", '"NATIVE"')
         }
         create("nonNative") {
             dimension = "processing_type"
-            buildConfigField("String", "type", '"NON_NATIVE"')
+            buildConfigField("String", "TYPE", '"NON_NATIVE"')
         }
     }
 

@@ -87,7 +87,7 @@ public class CropImageView extends TransformImageView {
                 compressFormat, compressQuality,
                 getImageInputPath(), getImageOutputPath(), getExifInfo());
 
-        if (BuildConfig.type.equals(UCropBackendType.NATIVE.label)) {
+        if (BuildConfig.TYPE.equals(UCropBackendType.NATIVE.label)) {
             new BitmapCropTask(getViewBitmap(), imageState, cropParameters, cropCallback)
                     .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
         } else {

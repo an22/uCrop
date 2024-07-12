@@ -32,11 +32,11 @@ android {
     productFlavors {
         activity {
             dimension = "app_type"
-            buildConfigField("int","RequestMode", "1")
+            buildConfigField("int","REQUEST_MODE", "1")
         }
         fragment {
             dimension = "app_type"
-            buildConfigField("int","RequestMode", "2")
+            buildConfigField("int","REQUEST_MODE", "2")
         }
         create("native") {
             dimension = "processing_type"
