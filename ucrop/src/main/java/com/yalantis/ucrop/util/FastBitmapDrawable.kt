@@ -13,91 +13,66 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.yalantis.ucrop.util;
+package com.yalantis.ucrop.util
 
-import android.graphics.Bitmap;
-import android.graphics.Canvas;
-import android.graphics.ColorFilter;
-import android.graphics.Paint;
-import android.graphics.PixelFormat;
-import android.graphics.drawable.Drawable;
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.ColorFilter
+import android.graphics.Paint
+import android.graphics.PixelFormat
+import android.graphics.drawable.Drawable
 
-public class FastBitmapDrawable extends Drawable {
+class FastBitmapDrawable(@JvmField var bitmap: Bitmap?) : Drawable() {
 
-    private final Paint mPaint = new Paint(Paint.FILTER_BITMAP_FLAG);
+    private val mPaint = Paint(Paint.FILTER_BITMAP_FLAG)
+    private var mBitmap: Bitmap? = null
+    private var mAlpha = 255
+    private var mWidth = 0
+    private var mHeight = 0
 
-    private Bitmap mBitmap;
-    private int mAlpha;
-    private int mWidth, mHeight;
-
-    public FastBitmapDrawable(Bitmap b) {
-        mAlpha = 255;
-        setBitmap(b);
-    }
-
-    @Override
-    public void draw(Canvas canvas) {
-        if (mBitmap != null && !mBitmap.isRecycled()) {
-            canvas.drawBitmap(mBitmap, null, getBounds(), mPaint);
+    override fun draw(canvas: Canvas) {
+        if (mBitmap != null && !mBitmap!!.isRecycled) {
+            canvas.drawBitmap(mBitmap!!, null, getBounds(), mPaint)
         }
     }
 
-    @Override
-    public void setColorFilter(ColorFilter cf) {
-        mPaint.setColorFilter(cf);
+    override fun setColorFilter(cf: ColorFilter?) {
+        mPaint.setColorFilter(cf)
     }
 
-    @Override
-    public int getOpacity() {
-        return PixelFormat.TRANSLUCENT;
+    @Deprecated("Deprecated in Java",
+        ReplaceWith("PixelFormat.TRANSLUCENT", "android.graphics.PixelFormat")
+    )
+    override fun getOpacity(): Int {
+        return PixelFormat.TRANSLUCENT
     }
 
-    public void setFilterBitmap(boolean filterBitmap) {
-        mPaint.setFilterBitmap(filterBitmap);
+    override fun setFilterBitmap(filterBitmap: Boolean) {
+        mPaint.isFilterBitmap = filterBitmap
     }
 
-    public int getAlpha() {
-        return mAlpha;
+    override fun getAlpha(): Int {
+        return mAlpha
     }
 
-    @Override
-    public void setAlpha(int alpha) {
-        mAlpha = alpha;
-        mPaint.setAlpha(alpha);
+    override fun setAlpha(alpha: Int) {
+        mAlpha = alpha
+        mPaint.setAlpha(alpha)
     }
 
-    @Override
-    public int getIntrinsicWidth() {
-        return mWidth;
+    override fun getIntrinsicWidth(): Int {
+        return mWidth
     }
 
-    @Override
-    public int getIntrinsicHeight() {
-        return mHeight;
+    override fun getIntrinsicHeight(): Int {
+        return mHeight
     }
 
-    @Override
-    public int getMinimumWidth() {
-        return mWidth;
+    override fun getMinimumWidth(): Int {
+        return mWidth
     }
 
-    @Override
-    public int getMinimumHeight() {
-        return mHeight;
+    override fun getMinimumHeight(): Int {
+        return mHeight
     }
-
-    public Bitmap getBitmap() {
-        return mBitmap;
-    }
-
-    public void setBitmap(Bitmap b) {
-        mBitmap = b;
-        if (b != null) {
-            mWidth = mBitmap.getWidth();
-            mHeight = mBitmap.getHeight();
-        } else {
-            mWidth = mHeight = 0;
-        }
-    }
-
 }

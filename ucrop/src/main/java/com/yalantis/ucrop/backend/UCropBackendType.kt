@@ -1,12 +1,6 @@
-package com.yalantis.ucrop.backend;
+package com.yalantis.ucrop.backend
 
-public enum UCropBackendType {
+enum class UCropBackendType(@JvmField val label: String) {
     NATIVE("NATIVE"),
-    DEFAULT("NON_NATIVE");
-
-    public final String label;
-
-    private UCropBackendType(String label) {
-        this.label = label;
-    }
+    DEFAULT("NON_NATIVE")
 }

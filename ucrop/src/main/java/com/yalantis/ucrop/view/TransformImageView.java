@@ -216,7 +216,7 @@ public class TransformImageView extends AppCompatImageView {
         if (getDrawable() == null || !(getDrawable() instanceof FastBitmapDrawable)) {
             return null;
         } else {
-            return ((FastBitmapDrawable) getDrawable()).getBitmap();
+            return ((FastBitmapDrawable) getDrawable()).bitmap;
         }
     }
 

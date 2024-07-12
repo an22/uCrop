@@ -1,12 +1,10 @@
-package com.yalantis.ucrop.callback;
+package com.yalantis.ucrop.callback
 
-import android.graphics.RectF;
+import android.graphics.RectF
 
 /**
  * Created by Oleksii Shliama.
  */
-public interface OverlayViewChangeListener {
-
-    void onCropRectUpdated(RectF cropRect);
-
+interface OverlayViewChangeListener {
+    fun onCropRectUpdated(cropRect: RectF?)
 }
