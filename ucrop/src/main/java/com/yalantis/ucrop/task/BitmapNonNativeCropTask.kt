@@ -9,13 +9,11 @@ import android.net.Uri
 import android.os.AsyncTask
 import android.util.Log
 import androidx.exifinterface.media.ExifInterface
+import com.yalantis.ucrop.bitmap.BitmapLoadUtils
 import com.yalantis.ucrop.callback.BitmapCropCallback
 import com.yalantis.ucrop.model.CropParameters
 import com.yalantis.ucrop.model.ExifInfo
 import com.yalantis.ucrop.model.ImageState
-import com.yalantis.ucrop.util.BitmapLoadUtils
-import com.yalantis.ucrop.util.FileUtils
-import com.yalantis.ucrop.util.ImageHeaderParser
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException

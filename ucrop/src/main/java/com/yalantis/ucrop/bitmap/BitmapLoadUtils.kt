@@ -1,124 +1,53 @@
-package com.yalantis.ucrop.util;
+package com.yalantis.ucrop.bitmap
 
-import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
-import android.graphics.Matrix;
-import android.graphics.Point;
-import android.net.Uri;
-import android.os.AsyncTask;
-import android.util.Log;
-import android.view.Display;
-import android.view.WindowManager;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.exifinterface.media.ExifInterface;
-
-import com.yalantis.ucrop.callback.BitmapLoadCallback;
-import com.yalantis.ucrop.task.BitmapLoadTask;
-
-import java.io.Closeable;
-import java.io.IOException;
-import java.io.InputStream;
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Matrix
+import android.graphics.Point
+import android.os.Build
+import android.view.Display
+import android.view.WindowManager
+import com.yalantis.ucrop.util.EglUtils
+import com.yalantis.ucrop.util.Logger
+import java.io.FileNotFoundException
+import java.io.IOException
+import java.io.InputStream
+import kotlin.math.min
+import kotlin.math.sqrt
 
 /**
- * Created by Oleksii Shliama (https://github.com/shliama).
+ * Created by Oleksii Shliama ([...](https://github.com/shliama)).
  */
-public class BitmapLoadUtils {
+object BitmapLoadUtils {
+    private const val MAX_BITMAP_SIZE = 100 * 1024 * 1024 // 100 MB
 
-    private static final String CONTENT_SCHEME = "content";
+    private const val TAG = "BitmapLoadUtils"
 
-    private static final String TAG = "BitmapLoadUtils";
+    @Suppress("DEPRECATION")
+    private val Bitmap.Config.pixelByteCount: Int
+        get() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            when (this) {
+                Bitmap.Config.ALPHA_8 -> 1
+                Bitmap.Config.RGB_565,
+                Bitmap.Config.ARGB_4444 -> 2
 
-    public static void decodeBitmapInBackground(@NonNull Context context,
-                                                @NonNull Uri uri, @Nullable Uri outputUri,
-                                                int requiredWidth, int requiredHeight,
-                                                BitmapLoadCallback loadCallback) {
+                Bitmap.Config.ARGB_8888,
+                Bitmap.Config.RGBA_1010102 -> 4
 
-        new BitmapLoadTask(context, uri, outputUri, requiredWidth, requiredHeight, loadCallback)
-                .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-    }
-
-    public static Bitmap transformBitmap(@NonNull Bitmap bitmap, @NonNull Matrix transformMatrix) {
-        try {
-            Bitmap converted = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), transformMatrix, true);
-            if (!bitmap.sameAs(converted)) {
-                bitmap = converted;
+                Bitmap.Config.RGBA_F16 -> 8
+                else -> 0
             }
-        } catch (OutOfMemoryError error) {
-            Log.e(TAG, "transformBitmap: ", error);
-        }
-        return bitmap;
-    }
+        } else {
+            when (this) {
+                Bitmap.Config.ALPHA_8 -> 1
+                Bitmap.Config.RGB_565,
+                Bitmap.Config.ARGB_4444 -> 2
 
-    public static int calculateInSampleSize(@NonNull BitmapFactory.Options options, int reqWidth, int reqHeight) {
-        // Raw height and width of image
-        final int height = options.outHeight;
-        final int width = options.outWidth;
-        int inSampleSize = 1;
-
-        if (height > reqHeight || width > reqWidth) {
-            // Calculate the largest inSampleSize value that is a power of 2 and keeps both
-            // height and width lower or equal to the requested height and width.
-            while ((height / inSampleSize) > reqHeight || (width / inSampleSize) > reqWidth) {
-                inSampleSize *= 2;
+                else -> 4
             }
         }
-        return inSampleSize;
-    }
-
-    public static int getExifOrientation(@NonNull Context context, @NonNull Uri imageUri) {
-        int orientation = ExifInterface.ORIENTATION_UNDEFINED;
-        try {
-            InputStream stream = context.getContentResolver().openInputStream(imageUri);
-            if (stream == null) {
-                return orientation;
-            }
-            orientation = new ImageHeaderParser(stream).getOrientation();
-            close(stream);
-        } catch (IOException e) {
-            Log.e(TAG, "getExifOrientation: " + imageUri.toString(), e);
-        }
-        return orientation;
-    }
-
-    public static int exifToDegrees(int exifOrientation) {
-        int rotation;
-        switch (exifOrientation) {
-            case ExifInterface.ORIENTATION_ROTATE_90:
-            case ExifInterface.ORIENTATION_TRANSPOSE:
-                rotation = 90;
-                break;
-            case ExifInterface.ORIENTATION_ROTATE_180:
-            case ExifInterface.ORIENTATION_FLIP_VERTICAL:
-                rotation = 180;
-                break;
-            case ExifInterface.ORIENTATION_ROTATE_270:
-            case ExifInterface.ORIENTATION_TRANSVERSE:
-                rotation = 270;
-                break;
-            default:
-                rotation = 0;
-        }
-        return rotation;
-    }
-
-    public static int exifToTranslation(int exifOrientation) {
-        int translation;
-        switch (exifOrientation) {
-            case ExifInterface.ORIENTATION_FLIP_HORIZONTAL:
-            case ExifInterface.ORIENTATION_FLIP_VERTICAL:
-            case ExifInterface.ORIENTATION_TRANSPOSE:
-            case ExifInterface.ORIENTATION_TRANSVERSE:
-                translation = -1;
-                break;
-            default:
-                translation = 1;
-        }
-        return translation;
-    }
 
     /**
      * This method calculates maximum size of both width and height of bitmap.
@@ -127,54 +56,121 @@ public class BitmapLoadUtils {
      *
      * @return - max bitmap size in pixels.
      */
-    @SuppressWarnings({"SuspiciousNameCombination", "deprecation"})
-    public static int calculateMaxBitmapSize(@NonNull Context context) {
-        WindowManager wm = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
-        Display display;
-        int width, height;
-        Point size = new Point();
+    @JvmStatic
+    @Suppress("deprecation")
+    fun calculateMaxBitmapSize(context: Context): Int {
+        val wm = context.getSystemService(Context.WINDOW_SERVICE) as? WindowManager
+        val display: Display
+        val width: Int
+        val height: Int
+        val size = Point()
 
         if (wm != null) {
-            display = wm.getDefaultDisplay();
-            display.getSize(size);
+            display = wm.defaultDisplay
+            display.getSize(size)
         }
 
-        width = size.x;
-        height = size.y;
+        width = size.x
+        height = size.y
 
         // Twice the device screen diagonal as default
-        int maxBitmapSize = (int) Math.sqrt(Math.pow(width, 2) + Math.pow(height, 2));
+        var maxBitmapSize = sqrt(width * width + height * height.toFloat()).toInt()
 
         // Check for max texture size via Canvas
-        Canvas canvas = new Canvas();
-        final int maxCanvasSize = Math.min(canvas.getMaximumBitmapWidth(), canvas.getMaximumBitmapHeight());
+        val canvas = Canvas()
+        val maxCanvasSize = min(canvas.maximumBitmapWidth, canvas.maximumBitmapHeight)
         if (maxCanvasSize > 0) {
-            maxBitmapSize = Math.min(maxBitmapSize, maxCanvasSize);
+            maxBitmapSize = min(maxBitmapSize, maxCanvasSize)
         }
 
         // Check for max texture size via GL
-        final int maxTextureSize = EglUtils.getMaxTextureSize();
+        val maxTextureSize: Int = EglUtils.maxTextureSize()
         if (maxTextureSize > 0) {
-            maxBitmapSize = Math.min(maxBitmapSize, maxTextureSize);
+            maxBitmapSize = min(maxBitmapSize, maxTextureSize)
         }
 
-        Log.d(TAG, "maxBitmapSize: " + maxBitmapSize);
-        return maxBitmapSize;
+        Logger.d(TAG, "maxBitmapSize: $maxBitmapSize")
+        return maxBitmapSize
     }
 
-    @SuppressWarnings("ConstantConditions")
-    public static void close(@Nullable Closeable c) {
-        if (c != null && c instanceof Closeable) { // java.lang.IncompatibleClassChangeError: interface not implemented
-            try {
-                c.close();
-            } catch (IOException e) {
-                // silence
+    /**
+     * This method decodes bitmap from uri with these steps
+     *
+     * 1. Open input stream
+     * 2. Downsample image according to size restriction
+     * 3. Apply transformations from exif interface
+     *
+     * @return - max bitmap size in pixels.
+     */
+
+    @Throws(FileNotFoundException::class, IOException::class)
+    fun decodeSampledBitmapFromStream(
+        inputStream: InputStream,
+        reqWidth: Int,
+        reqHeight: Int
+    ): Bitmap {
+        val options = BitmapFactory.Options().apply {
+            inJustDecodeBounds = true
+        }
+        BitmapFactory.decodeStream(inputStream, null, options)
+        options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight)
+        options.inJustDecodeBounds = false
+        return BitmapFactory.decodeStream(inputStream, null, options)
+            ?: throw IOException("Cannot decode stream: $inputStream")
+    }
+
+    private fun calculateInSampleSize(
+        options: BitmapFactory.Options,
+        reqWidth: Int,
+        reqHeight: Int
+    ): Int {
+        // Raw height and width of image
+        val height = options.outHeight
+        val width = options.outWidth
+        //Assume pixel size in bytes without reading bitmap from file
+        val worstCasePixelSizeAssumption = 4
+        val pixelSize = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            options.outConfig?.pixelByteCount ?: worstCasePixelSizeAssumption
+        } else {
+            worstCasePixelSizeAssumption
+        }
+        //Calculate bitmap size in memory after decoding
+        var inMemorySize = width * pixelSize * height
+        var inSampleSize = 1
+
+        if (height > reqHeight || width > reqWidth) {
+            // Calculate the largest inSampleSize value that is a power of 2 and keeps both
+            // height and width lower or equal to the requested height and width.
+            while ((height / inSampleSize) > reqHeight || (width / inSampleSize) > reqWidth || inMemorySize > MAX_BITMAP_SIZE) {
+                inSampleSize *= 2
+                inMemorySize /= 2
             }
         }
+        return inSampleSize
     }
 
-    public static boolean hasContentScheme(Uri uri) {
-        return uri != null && CONTENT_SCHEME.equals(uri.getScheme());
+    fun transformBitmap(bitmap: Bitmap, transformMatrix: Matrix): Bitmap {
+        try {
+            val converted = Bitmap.createBitmap(
+                bitmap,
+                0,
+                0,
+                bitmap.width,
+                bitmap.height,
+                transformMatrix,
+                true
+            )
+            if (!bitmap.sameAs(converted)) {
+                return bitmap
+            }
+            return converted
+        } catch (error: OutOfMemoryError) {
+            Logger.e(
+                TAG,
+                "transformBitmap: Out of memory, exif transformation unavailable, falling back to default bitmap.",
+                error
+            )
+        }
+        return bitmap
     }
-
 }

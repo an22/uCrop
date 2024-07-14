@@ -10,8 +10,9 @@ import android.util.Log
  */
 object EglUtils {
     private const val TAG = "EglUtils"
+
     @JvmStatic
-    fun  maxTextureSize(): Int {
+    fun maxTextureSize(): Int {
         return try {
             maxTextureEgl14()
         } catch (e: Exception) {

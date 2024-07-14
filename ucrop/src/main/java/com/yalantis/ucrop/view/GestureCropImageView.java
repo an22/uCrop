@@ -6,7 +6,7 @@ import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 
-import com.yalantis.ucrop.util.RotationGestureDetector;
+import com.yalantis.ucrop.gesture.RotationGestureDetector;
 
 /**
  * Created by Oleksii Shliama (https://github.com/shliama).

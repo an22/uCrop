@@ -1,142 +1,113 @@
-package com.yalantis.ucrop.view;
+package com.yalantis.ucrop.view
 
-import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.Matrix;
-import android.graphics.RectF;
-import android.graphics.drawable.Drawable;
-import android.net.Uri;
-import android.util.AttributeSet;
-import android.util.Log;
-
-import androidx.annotation.IntRange;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.appcompat.widget.AppCompatImageView;
-
-import com.yalantis.ucrop.callback.BitmapLoadCallback;
-import com.yalantis.ucrop.model.ExifInfo;
-import com.yalantis.ucrop.util.BitmapLoadUtils;
-import com.yalantis.ucrop.util.FastBitmapDrawable;
-import com.yalantis.ucrop.util.RectUtils;
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Matrix
+import android.graphics.RectF
+import android.net.Uri
+import android.util.AttributeSet
+import android.util.Log
+import androidx.annotation.IntRange
+import androidx.appcompat.widget.AppCompatImageView
+import com.yalantis.ucrop.bitmap.BitmapLoadUtils.calculateMaxBitmapSize
+import com.yalantis.ucrop.util.FastBitmapDrawable
+import com.yalantis.ucrop.util.Logger
+import com.yalantis.ucrop.util.RectUtils.getCenterFromRect
+import com.yalantis.ucrop.util.RectUtils.getCornersFromRect
+import kotlin.math.atan2
+import kotlin.math.sqrt
 
 /**
  * Created by Oleksii Shliama (https://github.com/shliama).
- * <p/>
+ *
+ *
  * This class provides base logic to setup the image, transform it with matrix (move, scale, rotate),
  * and methods to get current matrix state.
  */
-public class TransformImageView extends AppCompatImageView {
+open class TransformImageView @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet? = null,
+    defStyle: Int = 0
+) : AppCompatImageView(context, attrs, defStyle) {
+    @JvmField
+    protected val mCurrentImageCorners: FloatArray = FloatArray(RECT_CORNER_POINTS_COORDS)
 
-    private static final String TAG = "TransformImageView";
+    @JvmField
+    protected val mCurrentImageCenter: FloatArray = FloatArray(RECT_CENTER_POINT_COORDS)
 
-    private static final int RECT_CORNER_POINTS_COORDS = 8;
-    private static final int RECT_CENTER_POINT_COORDS = 2;
-    private static final int MATRIX_VALUES_COUNT = 9;
+    @JvmField
+    protected val maxBitmapSize: Int = calculateMaxBitmapSize(context)
 
-    protected final float[] mCurrentImageCorners = new float[RECT_CORNER_POINTS_COORDS];
-    protected final float[] mCurrentImageCenter = new float[RECT_CENTER_POINT_COORDS];
+    private val mMatrixValues = FloatArray(MATRIX_VALUES_COUNT)
 
-    private final float[] mMatrixValues = new float[MATRIX_VALUES_COUNT];
+    @JvmField
+    protected val mCurrentImageMatrix: Matrix = Matrix()
 
-    protected Matrix mCurrentImageMatrix = new Matrix();
-    protected int mThisWidth, mThisHeight;
+    @JvmField
+    protected var mThisWidth: Int = 0
 
-    protected TransformImageListener mTransformImageListener;
+    @JvmField
+    protected var mThisHeight: Int = 0
 
-    private float[] mInitialImageCorners;
-    private float[] mInitialImageCenter;
+    @JvmField
+    protected var mTransformImageListener: TransformImageListener? = null
 
-    protected boolean mBitmapDecoded = false;
-    protected boolean mBitmapLaidOut = false;
+    private var mInitialImageCorners: FloatArray
+    private var mInitialImageCenter: FloatArray
 
-    private int mMaxBitmapSize = 0;
+    protected var mBitmapDecoded: Boolean = false
 
-    private String mImageInputPath, mImageOutputPath;
-    private Uri mImageInputUri, mImageOutputUri;
-    private ExifInfo mExifInfo;
+    @JvmField
+    protected var mBitmapLaidOut: Boolean = false
 
     /**
      * Interface for rotation and scale change notifying.
      */
-    public interface TransformImageListener {
+    interface TransformImageListener {
+        fun onLoadComplete()
 
-        void onLoadComplete();
+        fun onLoadFailure(e: Exception)
 
-        void onLoadFailure(@NonNull Exception e);
+        fun onRotate(currentAngle: Float)
 
-        void onRotate(float currentAngle);
-
-        void onScale(float currentScale);
-
+        fun onScale(currentScale: Float)
     }
 
-    public TransformImageView(Context context) {
-        this(context, null);
+    init {
+        init()
     }
 
-    public TransformImageView(Context context, AttributeSet attrs) {
-        this(context, attrs, 0);
+    fun setTransformImageListener(transformImageListener: TransformImageListener?) {
+        mTransformImageListener = transformImageListener
     }
 
-    public TransformImageView(Context context, AttributeSet attrs, int defStyle) {
-        super(context, attrs, defStyle);
-        init();
-    }
-
-    public void setTransformImageListener(TransformImageListener transformImageListener) {
-        mTransformImageListener = transformImageListener;
-    }
-
-    @Override
-    public void setScaleType(ScaleType scaleType) {
+    override fun setScaleType(scaleType: ScaleType) {
         if (scaleType == ScaleType.MATRIX) {
-            super.setScaleType(scaleType);
+            super.setScaleType(scaleType)
         } else {
-            Log.w(TAG, "Invalid ScaleType. Only ScaleType.MATRIX can be used");
+            Logger.w(TAG, "Invalid ScaleType. Only ScaleType.MATRIX can be used")
         }
     }
 
-    /**
-     * Setter for {@link #mMaxBitmapSize} value.
-     * Be sure to call it before {@link #setImageURI(Uri)} or other image setters.
-     *
-     * @param maxBitmapSize - max size for both width and height of bitmap that will be used in the view.
-     */
-    public void setMaxBitmapSize(int maxBitmapSize) {
-        mMaxBitmapSize = maxBitmapSize;
-    }
-
-    public int getMaxBitmapSize() {
-        if (mMaxBitmapSize <= 0) {
-            mMaxBitmapSize = BitmapLoadUtils.calculateMaxBitmapSize(getContext());
+    var maxBitmapSize: Int
+        get() {
+            if (mMaxBitmapSize <= 0) {
+                mMaxBitmapSize = calculateMaxBitmapSize(context)
+            }
+            return mMaxBitmapSize
         }
-        return mMaxBitmapSize;
-    }
+        /**
+         * Setter for [.mMaxBitmapSize] value.
+         * Be sure to call it before [.setImageURI] or other image setters.
+         *
+         * @param maxBitmapSize - max size for both width and height of bitmap that will be used in the view.
+         */
+        set(maxBitmapSize) {
+            mMaxBitmapSize = maxBitmapSize
+        }
 
-    @Override
-    public void setImageBitmap(final Bitmap bitmap) {
-        setImageDrawable(new FastBitmapDrawable(bitmap));
-    }
-
-    public String getImageInputPath() {
-        return mImageInputPath;
-    }
-
-    public String getImageOutputPath() {
-        return mImageOutputPath;
-    }
-
-    public Uri getImageInputUri() {
-        return mImageInputUri;
-    }
-
-    public Uri getImageOutputUri() {
-        return mImageOutputUri;
-    }
-
-    public ExifInfo getExifInfo() {
-        return mExifInfo;
+    override fun setImageBitmap(bitmap: Bitmap) {
+        setImageDrawable(FastBitmapDrawable(bitmap))
     }
 
     /**
@@ -145,80 +116,82 @@ public class TransformImageView extends AppCompatImageView {
      * @param imageUri - image Uri
      * @throws Exception - can throw exception if having problems with decoding Uri or OOM.
      */
-    public void setImageUri(@NonNull Uri imageUri, @Nullable Uri outputUri) throws Exception {
-        int maxBitmapSize = getMaxBitmapSize();
+    @Throws(Exception::class)
+    fun setImageUri(imageUri: Uri, outputUri: Uri?) {
 
-        BitmapLoadUtils.decodeBitmapInBackground(getContext(), imageUri, outputUri, maxBitmapSize, maxBitmapSize,
-                new BitmapLoadCallback() {
 
-                    @Override
-                    public void onBitmapLoaded(@NonNull Bitmap bitmap, @NonNull ExifInfo exifInfo, @NonNull Uri imageInputUri, @Nullable Uri imageOutputUri) {
-                        mImageInputUri = imageInputUri;
-                        mImageOutputUri = imageOutputUri;
-                        mImageInputPath = imageInputUri.getPath();
-                        mImageOutputPath = imageOutputUri != null ? imageOutputUri.getPath() : null;
-                        mExifInfo = exifInfo;
-
-                        mBitmapDecoded = true;
-                        setImageBitmap(bitmap);
-                    }
-
-                    @Override
-                    public void onFailure(@NonNull Exception bitmapWorkerException) {
-                        Log.e(TAG, "onFailure: setImageUri", bitmapWorkerException);
-                        if (mTransformImageListener != null) {
-                            mTransformImageListener.onLoadFailure(bitmapWorkerException);
-                        }
-                    }
-                });
+        //        BitmapLoadUtils.decodeBitmapInBackground(getContext(), imageUri, outputUri, maxBitmapSize, maxBitmapSize,
+//                new BitmapLoadCallback() {
+//
+//                    @Override
+//                    public void onBitmapLoaded(@NonNull Bitmap bitmap, @NonNull ExifInfo exifInfo, @NonNull Uri imageInputUri, @Nullable Uri imageOutputUri) {
+//                        mImageInputUri = imageInputUri;
+//                        mImageOutputUri = imageOutputUri;
+//                        mImageInputPath = imageInputUri.getPath();
+//                        mImageOutputPath = imageOutputUri != null ? imageOutputUri.getPath() : null;
+//                        mExifInfo = exifInfo;
+//
+//                        mBitmapDecoded = true;
+//                        setImageBitmap(bitmap);
+//                    }
+//
+//                    @Override
+//                    public void onFailure(@NonNull Exception bitmapWorkerException) {
+//                        Log.e(TAG, "onFailure: setImageUri", bitmapWorkerException);
+//                        if (mTransformImageListener != null) {
+//                            mTransformImageListener.onLoadFailure(bitmapWorkerException);
+//                        }
+//                    }
+//                });
     }
 
-    /**
-     * @return - current image scale value.
-     * [1.0f - for original image, 2.0f - for 200% scaled image, etc.]
-     */
-    public float getCurrentScale() {
-        return getMatrixScale(mCurrentImageMatrix);
-    }
+    val currentScale: Float
+        /**
+         * @return - current image scale value.
+         * [1.0f - for original image, 2.0f - for 200% scaled image, etc.]
+         */
+        get() = getMatrixScale(mCurrentImageMatrix)
 
     /**
      * This method calculates scale value for given Matrix object.
      */
-    public float getMatrixScale(@NonNull Matrix matrix) {
-        return (float) Math.sqrt(Math.pow(getMatrixValue(matrix, Matrix.MSCALE_X), 2)
-                + Math.pow(getMatrixValue(matrix, Matrix.MSKEW_Y), 2));
+    fun getMatrixScale(matrix: Matrix): Float {
+        return sqrt(
+            getMatrixValue(
+                matrix,
+                Matrix.MSCALE_X
+            ).pow(2.0) + getMatrixValue(matrix, Matrix.MSKEW_Y).pow(2.0)
+        ).toFloat()
     }
 
-    /**
-     * @return - current image rotation angle.
-     */
-    public float getCurrentAngle() {
-        return getMatrixAngle(mCurrentImageMatrix);
-    }
+    val currentAngle: Float
+        /**
+         * @return - current image rotation angle.
+         */
+        get() = getMatrixAngle(mCurrentImageMatrix)
 
     /**
      * This method calculates rotation angle for given Matrix object.
      */
-    public float getMatrixAngle(@NonNull Matrix matrix) {
-        return (float) -(Math.atan2(getMatrixValue(matrix, Matrix.MSKEW_X),
-                getMatrixValue(matrix, Matrix.MSCALE_X)) * (180 / Math.PI));
+    fun getMatrixAngle(matrix: Matrix): Float {
+        return -(atan2(
+            getMatrixValue(matrix, Matrix.MSKEW_X).toDouble(),
+            getMatrixValue(matrix, Matrix.MSCALE_X).toDouble()
+        ) * (180 / Math.PI)).toFloat()
     }
 
-    @Override
-    public void setImageMatrix(Matrix matrix) {
-        super.setImageMatrix(matrix);
-        mCurrentImageMatrix.set(matrix);
-        updateCurrentImagePoints();
+    override fun setImageMatrix(matrix: Matrix) {
+        super.setImageMatrix(matrix)
+        mCurrentImageMatrix.set(matrix)
+        updateCurrentImagePoints()
     }
 
-    @Nullable
-    public Bitmap getViewBitmap() {
-        if (getDrawable() == null || !(getDrawable() instanceof FastBitmapDrawable)) {
-            return null;
+    val viewBitmap: Bitmap?
+        get() = if (drawable == null || drawable !is FastBitmapDrawable) {
+            null
         } else {
-            return ((FastBitmapDrawable) getDrawable()).bitmap;
+            (drawable as FastBitmapDrawable).bitmap
         }
-    }
 
     /**
      * This method translates current image.
@@ -226,10 +199,10 @@ public class TransformImageView extends AppCompatImageView {
      * @param deltaX - horizontal shift
      * @param deltaY - vertical shift
      */
-    public void postTranslate(float deltaX, float deltaY) {
-        if (deltaX != 0 || deltaY != 0) {
-            mCurrentImageMatrix.postTranslate(deltaX, deltaY);
-            setImageMatrix(mCurrentImageMatrix);
+    fun postTranslate(deltaX: Float, deltaY: Float) {
+        if (deltaX != 0f || deltaY != 0f) {
+            mCurrentImageMatrix.postTranslate(deltaX, deltaY)
+            imageMatrix = mCurrentImageMatrix
         }
     }
 
@@ -240,12 +213,12 @@ public class TransformImageView extends AppCompatImageView {
      * @param px         - scale center X
      * @param py         - scale center Y
      */
-    public void postScale(float deltaScale, float px, float py) {
-        if (deltaScale != 0) {
-            mCurrentImageMatrix.postScale(deltaScale, deltaScale, px, py);
-            setImageMatrix(mCurrentImageMatrix);
+    open fun postScale(deltaScale: Float, px: Float, py: Float) {
+        if (deltaScale != 0f) {
+            mCurrentImageMatrix.postScale(deltaScale, deltaScale, px, py)
+            imageMatrix = mCurrentImageMatrix
             if (mTransformImageListener != null) {
-                mTransformImageListener.onScale(getMatrixScale(mCurrentImageMatrix));
+                mTransformImageListener!!.onScale(getMatrixScale(mCurrentImageMatrix))
             }
         }
     }
@@ -257,59 +230,58 @@ public class TransformImageView extends AppCompatImageView {
      * @param px         - rotation center X
      * @param py         - rotation center Y
      */
-    public void postRotate(float deltaAngle, float px, float py) {
-        if (deltaAngle != 0) {
-            mCurrentImageMatrix.postRotate(deltaAngle, px, py);
-            setImageMatrix(mCurrentImageMatrix);
+    fun postRotate(deltaAngle: Float, px: Float, py: Float) {
+        if (deltaAngle != 0f) {
+            mCurrentImageMatrix.postRotate(deltaAngle, px, py)
+            imageMatrix = mCurrentImageMatrix
             if (mTransformImageListener != null) {
-                mTransformImageListener.onRotate(getMatrixAngle(mCurrentImageMatrix));
+                mTransformImageListener!!.onRotate(getMatrixAngle(mCurrentImageMatrix))
             }
         }
     }
 
-    protected void init() {
-        setScaleType(ScaleType.MATRIX);
+    protected open fun init() {
+        scaleType = ScaleType.MATRIX
     }
 
-    @Override
-    protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
-        super.onLayout(changed, left, top, right, bottom);
+    override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+        var left = left
+        var top = top
+        var right = right
+        var bottom = bottom
+        super.onLayout(changed, left, top, right, bottom)
         if (changed || (mBitmapDecoded && !mBitmapLaidOut)) {
+            left = paddingLeft
+            top = paddingTop
+            right = width - paddingRight
+            bottom = height - paddingBottom
+            mThisWidth = right - left
+            mThisHeight = bottom - top
 
-            left = getPaddingLeft();
-            top = getPaddingTop();
-            right = getWidth() - getPaddingRight();
-            bottom = getHeight() - getPaddingBottom();
-            mThisWidth = right - left;
-            mThisHeight = bottom - top;
-
-            onImageLaidOut();
+            onImageLaidOut()
         }
     }
 
     /**
-     * When image is laid out {@link #mInitialImageCenter} and {@link #mInitialImageCenter}
+     * When image is laid out [.mInitialImageCenter] and [.mInitialImageCenter]
      * must be set.
      */
-    protected void onImageLaidOut() {
-        final Drawable drawable = getDrawable();
-        if (drawable == null) {
-            return;
-        }
+    protected open fun onImageLaidOut() {
+        val drawable = drawable ?: return
 
-        float w = drawable.getIntrinsicWidth();
-        float h = drawable.getIntrinsicHeight();
+        val w = drawable.intrinsicWidth.toFloat()
+        val h = drawable.intrinsicHeight.toFloat()
 
-        Log.d(TAG, String.format("Image size: [%d:%d]", (int) w, (int) h));
+        Log.d(TAG, String.format("Image size: [%d:%d]", w.toInt(), h.toInt()))
 
-        RectF initialImageRect = new RectF(0, 0, w, h);
-        mInitialImageCorners = RectUtils.getCornersFromRect(initialImageRect);
-        mInitialImageCenter = RectUtils.getCenterFromRect(initialImageRect);
+        val initialImageRect = RectF(0f, 0f, w, h)
+        mInitialImageCorners = getCornersFromRect(initialImageRect)
+        mInitialImageCenter = getCenterFromRect(initialImageRect)
 
-        mBitmapLaidOut = true;
+        mBitmapLaidOut = true
 
         if (mTransformImageListener != null) {
-            mTransformImageListener.onLoadComplete();
+            mTransformImageListener!!.onLoadComplete()
         }
     }
 
@@ -317,35 +289,48 @@ public class TransformImageView extends AppCompatImageView {
      * This method returns Matrix value for given index.
      *
      * @param matrix     - valid Matrix object
-     * @param valueIndex - index of needed value. See {@link Matrix#MSCALE_X} and others.
+     * @param valueIndex - index of needed value. See [Matrix.MSCALE_X] and others.
      * @return - matrix value for index
      */
-    protected float getMatrixValue(@NonNull Matrix matrix, @IntRange(from = 0, to = MATRIX_VALUES_COUNT) int valueIndex) {
-        matrix.getValues(mMatrixValues);
-        return mMatrixValues[valueIndex];
+    protected fun getMatrixValue(
+        matrix: Matrix,
+        @IntRange(
+            from = 0,
+            to = MATRIX_VALUES_COUNT.toLong()
+        ) valueIndex: Int
+    ): Float {
+        matrix.getValues(mMatrixValues)
+        return mMatrixValues[valueIndex]
     }
 
     /**
      * This method logs given matrix X, Y, scale, and angle values.
      * Can be used for debug.
      */
-    @SuppressWarnings("unused")
-    protected void printMatrix(@NonNull String logPrefix, @NonNull Matrix matrix) {
-        float x = getMatrixValue(matrix, Matrix.MTRANS_X);
-        float y = getMatrixValue(matrix, Matrix.MTRANS_Y);
-        float rScale = getMatrixScale(matrix);
-        float rAngle = getMatrixAngle(matrix);
-        Log.d(TAG, logPrefix + ": matrix: { x: " + x + ", y: " + y + ", scale: " + rScale + ", angle: " + rAngle + " }");
+    @Suppress("unused")
+    protected fun printMatrix(logPrefix: String, matrix: Matrix) {
+        val x = getMatrixValue(matrix, Matrix.MTRANS_X)
+        val y = getMatrixValue(matrix, Matrix.MTRANS_Y)
+        val rScale = getMatrixScale(matrix)
+        val rAngle = getMatrixAngle(matrix)
+        Log.d(TAG, "$logPrefix: matrix: { x: $x, y: $y, scale: $rScale, angle: $rAngle }")
     }
 
     /**
      * This method updates current image corners and center points that are stored in
-     * {@link #mCurrentImageCorners} and {@link #mCurrentImageCenter} arrays.
+     * [.mCurrentImageCorners] and [.mCurrentImageCenter] arrays.
      * Those are used for several calculations.
      */
-    private void updateCurrentImagePoints() {
-        mCurrentImageMatrix.mapPoints(mCurrentImageCorners, mInitialImageCorners);
-        mCurrentImageMatrix.mapPoints(mCurrentImageCenter, mInitialImageCenter);
+    private fun updateCurrentImagePoints() {
+        mCurrentImageMatrix.mapPoints(mCurrentImageCorners, mInitialImageCorners)
+        mCurrentImageMatrix.mapPoints(mCurrentImageCenter, mInitialImageCenter)
     }
 
+    companion object {
+        private const val TAG = "TransformImageView"
+
+        private const val RECT_CORNER_POINTS_COORDS = 8
+        private const val RECT_CENTER_POINT_COORDS = 2
+        private const val MATRIX_VALUES_COUNT = 9
+    }
 }

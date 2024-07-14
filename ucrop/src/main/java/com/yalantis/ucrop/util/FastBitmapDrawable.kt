@@ -31,8 +31,9 @@ class FastBitmapDrawable(@JvmField var bitmap: Bitmap?) : Drawable() {
     private var mHeight = 0
 
     override fun draw(canvas: Canvas) {
-        if (mBitmap != null && !mBitmap!!.isRecycled) {
-            canvas.drawBitmap(mBitmap!!, null, getBounds(), mPaint)
+        val bitmap = mBitmap
+        if (bitmap != null && !bitmap.isRecycled) {
+            canvas.drawBitmap(bitmap, null, bounds, mPaint)
         }
     }
 

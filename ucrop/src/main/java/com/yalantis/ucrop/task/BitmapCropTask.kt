@@ -12,8 +12,6 @@ import com.yalantis.ucrop.callback.BitmapCropCallback
 import com.yalantis.ucrop.model.CropParameters
 import com.yalantis.ucrop.model.ExifInfo
 import com.yalantis.ucrop.model.ImageState
-import com.yalantis.ucrop.util.FileUtils
-import com.yalantis.ucrop.util.ImageHeaderParser
 import java.io.File
 import java.io.IOException
 import kotlin.math.abs
@@ -121,7 +119,7 @@ class BitmapCropTask(
                 mImageInputPath, mImageOutputPath,
                 cropOffsetX, cropOffsetY, mCroppedImageWidth, mCroppedImageHeight,
                 mCurrentAngle, resizeScale, mCompressFormat.ordinal, mCompressQuality,
-                mExifInfo.exifDegrees, mExifInfo.exifTranslation
+                mExifInfo.exifDegrees, mExifInfo.exifScale
             )
             if (cropped && mCompressFormat == CompressFormat.JPEG) {
                 ImageHeaderParser.copyExif(

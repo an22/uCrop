@@ -6,16 +6,12 @@ import android.graphics.RectF
 import android.net.Uri
 import android.os.Build
 import androidx.exifinterface.media.ExifInterface
-import com.yalantis.ucrop.backend.UCropBackend
+import com.yalantis.ucrop.backend.CropBackend
 import com.yalantis.ucrop.model.CropParameters
 import com.yalantis.ucrop.model.CropResult
 import com.yalantis.ucrop.model.ImageState
 import com.yalantis.ucrop.model.ScaleInfo
 import com.yalantis.ucrop.task.BitmapCropTask
-import com.yalantis.ucrop.util.FileUtils
-import com.yalantis.ucrop.util.ImageHeaderParser
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import java.io.File
 import java.io.IOException
 import kotlin.math.abs
@@ -24,22 +20,15 @@ import kotlin.math.min
 import kotlin.math.round
 import android.os.FileUtils as AndroidFileUtils
 
-internal class NativeBackend(
-    private val dispatcher: CoroutineDispatcher = Dispatchers.IO
-) : UCropBackend {
+internal class NativeBackend : CropBackend {
 
     override suspend fun crop(
         viewBitmap: Bitmap,
         imageState: ImageState,
         cropParameters: CropParameters
-    ): Result<CropResult> = with(dispatcher) {
-        assert(!viewBitmap.isRecycled) { "ViewBitmap is recycled" }
-        assert(!imageState.currentImageRect.isEmpty) { "CurrentImageRect is empty" }
-        runCatching {
-            val scaleInfo = resize(viewBitmap, imageState, cropParameters)
-            cropNative(imageState, cropParameters, scaleInfo)
-        }
-
+    ): CropResult {
+        val scaleInfo = resize(viewBitmap, imageState, cropParameters)
+        return cropNative(imageState, cropParameters, scaleInfo)
     }
 
     @Throws(IOException::class)
@@ -107,9 +96,11 @@ internal class NativeBackend(
                 cropParameters.compressFormat.ordinal,
                 cropParameters.compressQuality,
                 cropParameters.exifInfo.exifDegrees,
-                cropParameters.exifInfo.exifTranslation
+                cropParameters.exifInfo.exifScale
             )
-            if (cropped && cropParameters.compressFormat == Bitmap.CompressFormat.JPEG) {
+            if (cropped) {
+                ExifInterface(cropParameters.imageOutputPath)
+                copyExif
                 ImageHeaderParser.copyExif(
                     originalExif,
                     croppedImageWidth,
@@ -120,7 +111,7 @@ internal class NativeBackend(
         } else {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 AndroidFileUtils.copy(
-                    File(cropParameters.imageInputPath).inputStream(),
+                    File(cropParameters.imageInputPath),
                     File(cropParameters.imageOutputPath).outputStream()
                 )
             } else {
