@@ -12,16 +12,15 @@ import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.view.Gravity;
 
-import com.yalantis.ucrop.R;
-import com.yalantis.ucrop.model.AspectRatio;
-import com.yalantis.ucrop.view.CropImageView;
-
-import java.util.Locale;
-
 import androidx.annotation.ColorInt;
 import androidx.annotation.NonNull;
 import androidx.appcompat.widget.AppCompatTextView;
 import androidx.core.content.ContextCompat;
+
+import com.yalantis.ucrop.R;
+import com.yalantis.ucrop.model.AspectRatio;
+
+import java.util.Locale;
 
 /**
  * Created by Oleksii Shliama (https://github.com/shliama).
@@ -66,11 +65,7 @@ public class AspectRatioTextView extends AppCompatTextView {
         mAspectRatioX = aspectRatio.getAspectRatioX();
         mAspectRatioY = aspectRatio.getAspectRatioY();
 
-        if (mAspectRatioX == CropImageView.SOURCE_IMAGE_ASPECT_RATIO || mAspectRatioY == CropImageView.SOURCE_IMAGE_ASPECT_RATIO) {
-            mAspectRatio = CropImageView.SOURCE_IMAGE_ASPECT_RATIO;
-        } else {
-            mAspectRatio = mAspectRatioX / mAspectRatioY;
-        }
+        mAspectRatio = mAspectRatioX / mAspectRatioY;
 
         setTitle();
     }
@@ -102,14 +97,7 @@ public class AspectRatioTextView extends AppCompatTextView {
         setGravity(Gravity.CENTER_HORIZONTAL);
 
         mAspectRatioTitle = a.getString(R.styleable.ucrop_AspectRatioTextView_ucrop_artv_ratio_title);
-        mAspectRatioX = a.getFloat(R.styleable.ucrop_AspectRatioTextView_ucrop_artv_ratio_x, CropImageView.SOURCE_IMAGE_ASPECT_RATIO);
-        mAspectRatioY = a.getFloat(R.styleable.ucrop_AspectRatioTextView_ucrop_artv_ratio_y, CropImageView.SOURCE_IMAGE_ASPECT_RATIO);
-
-        if (mAspectRatioX == CropImageView.SOURCE_IMAGE_ASPECT_RATIO || mAspectRatioY == CropImageView.SOURCE_IMAGE_ASPECT_RATIO) {
-            mAspectRatio = CropImageView.SOURCE_IMAGE_ASPECT_RATIO;
-        } else {
-            mAspectRatio = mAspectRatioX / mAspectRatioY;
-        }
+        mAspectRatio = mAspectRatioX / mAspectRatioY;
 
         mDotSize = getContext().getResources().getDimensionPixelSize(R.dimen.ucrop_size_dot_scale_text_view);
         mDotPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -142,7 +130,7 @@ public class AspectRatioTextView extends AppCompatTextView {
     }
 
     private void toggleAspectRatio() {
-        if (mAspectRatio != CropImageView.SOURCE_IMAGE_ASPECT_RATIO) {
+        if (true) {
             float tempRatioW = mAspectRatioX;
             mAspectRatioX = mAspectRatioY;
             mAspectRatioY = tempRatioW;

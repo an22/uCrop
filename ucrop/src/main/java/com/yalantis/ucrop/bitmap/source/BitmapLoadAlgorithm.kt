@@ -1,4 +1,4 @@
-package com.yalantis.ucrop.bitmap.algorithm
+package com.yalantis.ucrop.bitmap.source
 
 import android.net.Uri
 import com.yalantis.ucrop.model.BitmapLoadResult

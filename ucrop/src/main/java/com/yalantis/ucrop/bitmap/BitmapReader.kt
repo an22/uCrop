@@ -2,10 +2,10 @@ package com.yalantis.ucrop.bitmap
 
 import android.content.Context
 import android.net.Uri
-import com.yalantis.ucrop.bitmap.algorithm.BitmapFromContentOrAssetAlgorithm
-import com.yalantis.ucrop.bitmap.algorithm.BitmapFromFileAlgorithm
-import com.yalantis.ucrop.bitmap.algorithm.BitmapFromRemoteAlgorithm
-import com.yalantis.ucrop.bitmap.algorithm.BitmapLoadAlgorithm
+import com.yalantis.ucrop.bitmap.source.BitmapFromContentOrAssetAlgorithm
+import com.yalantis.ucrop.bitmap.source.BitmapFromFileAlgorithm
+import com.yalantis.ucrop.bitmap.source.BitmapFromRemoteAlgorithm
+import com.yalantis.ucrop.bitmap.source.BitmapLoadAlgorithm
 import com.yalantis.ucrop.model.BitmapLoadResult
 import com.yalantis.ucrop.model.FileType
 

@@ -1,71 +1,106 @@
-package com.yalantis.ucrop.view;
+package com.yalantis.ucrop.view
 
-import android.content.Context;
-import android.util.AttributeSet;
-import android.view.GestureDetector;
-import android.view.MotionEvent;
-import android.view.ScaleGestureDetector;
-
-import com.yalantis.ucrop.gesture.RotationGestureDetector;
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Matrix
+import android.graphics.Rect
+import android.util.AttributeSet
+import android.view.GestureDetector
+import android.view.MotionEvent
+import android.view.ScaleGestureDetector
+import androidx.appcompat.widget.AppCompatImageView
+import androidx.core.graphics.values
+import com.yalantis.ucrop.gesture.RotationGestureDetector
+import com.yalantis.ucrop.util.Logger
+import com.yalantis.ucrop.view.adapter.KotlinOnGestureListener
+import com.yalantis.ucrop.view.adapter.KotlinOnRotateListener
+import com.yalantis.ucrop.view.adapter.KotlinOnScaleListener
+import com.yalantis.ucrop.view.drawable.CropOverlayDrawable
 
 /**
  * Created by Oleksii Shliama (https://github.com/shliama).
  */
-public class GestureCropImageView extends CropImageView {
+open class GestureCropImageView @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet? = null,
+    defStyle: Int = 0
+) : AppCompatImageView(context, attrs, defStyle) {
 
-    private static final int DOUBLE_TAP_ZOOM_DURATION = 200;
+    private val mScaleDetector = ScaleGestureDetector(context, KotlinOnScaleListener(onScale = {
+        drawMatrix.postScale(it.scaleFactor, it.scaleFactor, touchCenterX, touchCenterY)
+        imageMatrix = drawMatrix
+        true
+    }))
+    private val mRotateDetector = RotationGestureDetector(KotlinOnRotateListener(onRotation = {
+        drawMatrix.postRotate(it.angle, touchCenterX, touchCenterY)
+        imageMatrix = drawMatrix
+        true
+    }))
+    private val mGestureDetector = GestureDetector(context, KotlinOnGestureListener(
+        onScroll = { _, _, distanceX: Float, distanceY: Float ->
+            drawMatrix.postTranslate(-distanceX, -distanceY)
+            imageMatrix = drawMatrix
+        },
+        onDoubleTap = {
+            val scaleFactor = DOUBLE_TAP_SCALE_FACTOR
+            drawMatrix.postTranslate((width / 2f) - it.x, (height / 2f) - it.y)
+            drawMatrix.postScale(scaleFactor, scaleFactor, width / 2f, height / 2f)
+            imageMatrix = drawMatrix
+//            zoomImageToPosition(
+//                doubleTapTargetScale,
+//                it.x,
+//                it.y,
+//                DOUBLE_TAP_ZOOM_DURATION.toLong()
+//            )
+        }
+    ), null, true)
 
-    private ScaleGestureDetector mScaleDetector;
-    private RotationGestureDetector mRotateDetector;
-    private GestureDetector mGestureDetector;
+    var isRotateEnabled: Boolean = true
+    var isScaleEnabled: Boolean = true
+    var isGestureEnabled: Boolean = true
+    var doubleTapScaleSteps: Int = 5
 
-    private float mMidPntX, mMidPntY;
+    private var touchCenterX = 0f
+    private var touchCenterY = 0f
 
-    private boolean mIsRotateEnabled = true, mIsScaleEnabled = true, mIsGestureEnabled = true;
-    private int mDoubleTapScaleSteps = 5;
+    private val drawMatrix = Matrix()
+    private var bitmapSourceBounds = FloatArray(8)
+    private val bitmapActualBounds = FloatArray(8)
+    private val overlayDrawable = CropOverlayDrawable()
 
-    public GestureCropImageView(Context context) {
-        super(context);
+    override fun setImageBitmap(bm: Bitmap?) {
+        scaleType = ScaleType.FIT_CENTER
+        super.setImageBitmap(bm)
+        scaleType = ScaleType.MATRIX
+        drawMatrix.setValues(imageMatrix.values())
+        bitmapSourceBounds[0] = 0f
+        bitmapSourceBounds[1] = 0f
+
+        bitmapSourceBounds[2] = drawable.intrinsicWidth.toFloat()
+        bitmapSourceBounds[3] = 0f
+
+        bitmapSourceBounds[4] = drawable.intrinsicWidth.toFloat()
+        bitmapSourceBounds[5] = drawable.intrinsicHeight.toFloat()
+
+        bitmapSourceBounds[6] = 0f
+        bitmapSourceBounds[7] = drawable.intrinsicHeight.toFloat()
+
+        bitmapSourceBounds.copyInto(bitmapActualBounds)
+
+        drawMatrix.mapPoints(bitmapActualBounds)
     }
 
-    public GestureCropImageView(Context context, AttributeSet attrs) {
-        this(context, attrs, 0);
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        overlayDrawable.setBounds(0, 0, w, w)
+        overlayDrawable.setClipAreaBounds(Rect(50, 50, w - 50, h - 50))
     }
 
-    public GestureCropImageView(Context context, AttributeSet attrs, int defStyle) {
-        super(context, attrs, defStyle);
-    }
-
-    public void setScaleEnabled(boolean scaleEnabled) {
-        mIsScaleEnabled = scaleEnabled;
-    }
-
-    public boolean isScaleEnabled() {
-        return mIsScaleEnabled;
-    }
-
-    public void setRotateEnabled(boolean rotateEnabled) {
-        mIsRotateEnabled = rotateEnabled;
-    }
-
-    public boolean isRotateEnabled() {
-        return mIsRotateEnabled;
-    }
-
-    public void setGestureEnabled(boolean gestureEnabled) {
-        mIsGestureEnabled = gestureEnabled;
-    }
-
-    public boolean isGestureEnabled() {
-        return mIsGestureEnabled;
-    }
-
-    public void setDoubleTapScaleSteps(int doubleTapScaleSteps) {
-        mDoubleTapScaleSteps = doubleTapScaleSteps;
-    }
-
-    public int getDoubleTapScaleSteps() {
-        return mDoubleTapScaleSteps;
+    override fun setImageMatrix(matrix: Matrix?) {
+        super.setImageMatrix(matrix)
+        bitmapSourceBounds.copyInto(bitmapActualBounds)
+        matrix?.mapPoints(bitmapActualBounds)
     }
 
     /**
@@ -74,89 +109,72 @@ public class GestureCropImageView extends CropImageView {
      * If there are more than 2 fingers - update focal point coordinates.
      * Pass the event to the gesture detectors if those are enabled.
      */
-    @Override
-    public boolean onTouchEvent(MotionEvent event) {
-        if ((event.getAction() & MotionEvent.ACTION_MASK) == MotionEvent.ACTION_DOWN) {
-            cancelAllAnimations();
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        if ((event.action and MotionEvent.ACTION_MASK) == MotionEvent.ACTION_DOWN) {
+//            cancelAllAnimations()
         }
 
-        if (event.getPointerCount() > 1) {
-            mMidPntX = (event.getX(0) + event.getX(1)) / 2;
-            mMidPntY = (event.getY(0) + event.getY(1)) / 2;
+        if (event.pointerCount > 1) {
+            touchCenterX = (event.getX(0) + event.getX(1)) / 2
+            touchCenterY = (event.getY(0) + event.getY(1)) / 2
         }
 
-        if (mIsGestureEnabled) {
-            mGestureDetector.onTouchEvent(event);
+        if (isGestureEnabled) {
+            mGestureDetector.onTouchEvent(event)
         }
 
-        if (mIsScaleEnabled) {
-            mScaleDetector.onTouchEvent(event);
+        if (isScaleEnabled) {
+            mScaleDetector.onTouchEvent(event)
         }
 
-        if (mIsRotateEnabled) {
-            mRotateDetector.onTouchEvent(event);
+        if (isRotateEnabled) {
+            mRotateDetector.onTouchEvent(event)
         }
 
-        if ((event.getAction() & MotionEvent.ACTION_MASK) == MotionEvent.ACTION_UP) {
-            setImageToWrapCropBounds();
+        if ((event.action and MotionEvent.ACTION_MASK) == MotionEvent.ACTION_UP) {
+            wrapCropBounds()
         }
-        return true;
+        return true
     }
 
-    @Override
-    protected void init() {
-        super.init();
-        setupGestureListeners();
-    }
+    private fun wrapCropBounds() {
+        val cropBounds = overlayDrawable.cropAreaRect
 
-    /**
-     * This method calculates target scale value for double tap gesture.
-     * User is able to zoom the image from min scale value
-     * to the max scale value with {@link #mDoubleTapScaleSteps} double taps.
-     */
-    protected float getDoubleTapTargetScale() {
-        return getCurrentScale() * (float) Math.pow(getMaxScale() / getMinScale(), 1.0f / mDoubleTapScaleSteps);
-    }
+        var scaleFactor = 1f
+        var shouldScale = false
+        for(i in bitmapActualBounds.indices step 2) {
+            val x = bitmapActualBounds[i]
+            val y = bitmapActualBounds[i + 1]
 
-    private void setupGestureListeners() {
-        mGestureDetector = new GestureDetector(getContext(), new GestureListener(), null, true);
-        mScaleDetector = new ScaleGestureDetector(getContext(), new ScaleListener());
-        mRotateDetector = new RotationGestureDetector(new RotateListener());
-    }
+            if(!cropBounds.contains(x.toInt(), y.toInt())) {
+                shouldScale = true
+                break
+            }
+        }
+        if(shouldScale) {
 
-    private class ScaleListener extends ScaleGestureDetector.SimpleOnScaleGestureListener {
-
-        @Override
-        public boolean onScale(ScaleGestureDetector detector) {
-            postScale(detector.getScaleFactor(), mMidPntX, mMidPntY);
-            return true;
         }
     }
 
-    private class GestureListener extends GestureDetector.SimpleOnGestureListener {
-
-        @Override
-        public boolean onDoubleTap(MotionEvent e) {
-            zoomImageToPosition(getDoubleTapTargetScale(), e.getX(), e.getY(), DOUBLE_TAP_ZOOM_DURATION);
-            return super.onDoubleTap(e);
-        }
-
-        @Override
-        public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
-            postTranslate(-distanceX, -distanceY);
-            return true;
-        }
-
+    override fun getScaleType(): ScaleType {
+        return ScaleType.MATRIX
     }
 
-    private class RotateListener extends RotationGestureDetector.SimpleOnRotationGestureListener {
-
-        @Override
-        public boolean onRotation(RotationGestureDetector rotationDetector) {
-            postRotate(rotationDetector.getAngle(), mMidPntX, mMidPntY);
-            return true;
+    override fun setScaleType(scaleType: ScaleType?) {
+        if (scaleType != ScaleType.MATRIX) {
+            Logger.w(TAG, "This view only supports MATRIX scale type.")
         }
-
+        super.setScaleType(scaleType)
     }
 
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        overlayDrawable.draw(canvas)
+    }
+
+    companion object {
+        private const val DOUBLE_TAP_ZOOM_DURATION = 200
+        private const val DOUBLE_TAP_SCALE_FACTOR = 1.5f
+        private const val TAG = "CropImageView"
+    }
 }

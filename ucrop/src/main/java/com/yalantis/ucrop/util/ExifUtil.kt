@@ -61,7 +61,8 @@ object ExifUtil {
         return ExifInfo(
             exifOrientation = orientation,
             exifScale = exifToScale(orientation),
-            exifDegrees = exifToDegrees(orientation)
+            exifDegrees = exifToDegrees(orientation),
+            exif = eInterface
         )
     }
 }

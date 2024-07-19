@@ -95,14 +95,8 @@ class RotationGestureDetector(
         return angle
     }
 
-    open class SimpleOnRotationGestureListener : OnRotationGestureListener {
-        override fun onRotation(rotationDetector: RotationGestureDetector?): Boolean {
-            return false
-        }
-    }
-
     interface OnRotationGestureListener {
-        fun onRotation(rotationDetector: RotationGestureDetector?): Boolean
+        fun onRotation(rotationDetector: RotationGestureDetector): Boolean
     }
 
     companion object {

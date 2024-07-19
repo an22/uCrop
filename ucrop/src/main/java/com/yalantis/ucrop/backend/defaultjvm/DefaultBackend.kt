@@ -1,6 +1,7 @@
 package com.yalantis.ucrop.backend.defaultjvm
 
 import android.graphics.Bitmap
+import android.net.Uri
 import com.yalantis.ucrop.backend.CropBackend
 import com.yalantis.ucrop.model.CropParameters
 import com.yalantis.ucrop.model.CropResult
@@ -16,8 +17,7 @@ internal class DefaultBackend : CropBackend {
         assert(!imageState.currentImageRect.isEmpty) { "CurrentImageRect is empty" }
 
 
-        val scaleInfo = resize(viewBitmap, imageState, cropParameters)
-        return cropNonNative(imageState, cropParameters, scaleInfo)
+        return CropResult(Uri.EMPTY, 0, 0, viewBitmap.width, viewBitmap.height)
     }
 
 

@@ -25,21 +25,22 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.yalantis.ucrop.UCrop;
-import com.yalantis.ucrop.UCropActivity;
-import com.yalantis.ucrop.UCropFragment;
-import com.yalantis.ucrop.UCropFragmentCallback;
-
-import java.io.File;
-import java.util.Locale;
-import java.util.Random;
-
 import androidx.annotation.ColorInt;
 import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.ContextCompat;
+
+import com.yalantis.ucrop.UCrop;
+import com.yalantis.ucrop.UCropActivity;
+import com.yalantis.ucrop.UCropFragment;
+import com.yalantis.ucrop.UCropFragmentCallback;
+import com.yalantis.ucrop.model.UCropResult;
+
+import java.io.File;
+import java.util.Locale;
+import java.util.Random;
 
 /**
  * Created by Oleksii Shliama (https://github.com/shliama).
@@ -62,7 +63,7 @@ public class SampleActivity extends BaseActivity implements UCropFragmentCallbac
     private CheckBox mCheckBoxFreeStyleCrop;
     private Toolbar toolbar;
     private ScrollView settingsView;
-    private int requestMode = BuildConfig.RequestMode;
+    private int requestMode = BuildConfig.REQUEST_MODE;
 
     private UCropFragment fragment;
     private boolean mShowLoader;
@@ -390,13 +391,13 @@ public class SampleActivity extends BaseActivity implements UCropFragmentCallbac
     }
 
     @Override
-    public void onCropFinish(UCropFragment.UCropResult result) {
-        switch (result.mResultCode) {
+    public void onCropFinish(UCropResult result) {
+        switch (result.getResultCode()) {
             case RESULT_OK:
-                handleCropResult(result.mResultData);
+                handleCropResult(result.getResultData());
                 break;
             case UCrop.RESULT_ERROR:
-                handleCropError(result.mResultData);
+                handleCropError(result.getResultData());
                 break;
         }
         removeFragmentFromScreen();
@@ -519,8 +520,8 @@ public class SampleActivity extends BaseActivity implements UCropFragmentCallbac
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == R.id.menu_crop) {
-            if (fragment != null && fragment.isAdded())
-                fragment.cropAndSaveImage();
+            if (fragment != null && fragment.isAdded()) { }
+//                fragment.cropAndSaveImage();
         } else if (item.getItemId() == android.R.id.home) {
             removeFragmentFromScreen();
         }

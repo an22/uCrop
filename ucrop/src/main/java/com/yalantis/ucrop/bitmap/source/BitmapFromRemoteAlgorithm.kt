@@ -1,4 +1,4 @@
-package com.yalantis.ucrop.bitmap.algorithm
+package com.yalantis.ucrop.bitmap.source
 
 import android.content.Context
 import android.net.Uri
@@ -10,6 +10,7 @@ import com.yalantis.ucrop.model.BitmapLoadResult
 import com.yalantis.ucrop.model.FileType
 import com.yalantis.ucrop.util.ExifUtil
 import okhttp3.Request
+import java.io.BufferedInputStream
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
@@ -17,7 +18,7 @@ import java.io.InputStream
 class BitmapFromRemoteAlgorithm(private val context: Context) : BitmapLoadAlgorithm {
     override suspend fun loadBitmapWithExif(from: Uri, reqWidth: Int, reqHeight: Int): BitmapLoadResult {
         val type = FileType.from(from)
-        assert(type != FileType.REMOTE) { "This algorithm can't handle uri of $type" }
+        assert(type == FileType.REMOTE) { "This algorithm can't handle uri of $type" }
 
         val response = UCropHttpClientStore.INSTANCE.client
             .newCall(
@@ -28,13 +29,13 @@ class BitmapFromRemoteAlgorithm(private val context: Context) : BitmapLoadAlgori
 
         val stream = response.body?.byteStream() ?: throw IOException("Failed to download bitmap from $from")
         val cacheDir = File(context.cacheDir, UCROP_CACHE_DIR_NAME)
-        val cacheFile = File(cacheDir, from.hashCode().toString())
+        val cacheFile = File(cacheDir, response.request.url.pathSegments.last())
         try {
             createAndFillCacheFile(cacheDir, cacheFile, stream)
             val exifInterface = cacheFile.inputStream().use { ExifUtil.getExifInterface(it) }
             val exifInfo = ExifUtil.getExifInfo(exifInterface)
             val bitmap = cacheFile.inputStream().use {
-                BitmapLoadUtils.decodeSampledBitmapFromStream(it, reqWidth, reqHeight)
+                BitmapLoadUtils.decodeSampledBitmapFromStream(BufferedInputStream(it), reqWidth, reqHeight)
             }
             return BitmapLoadResult(
                 transformBitmap(bitmap, exifInfo.transformMatrix),
@@ -53,6 +54,7 @@ class BitmapFromRemoteAlgorithm(private val context: Context) : BitmapLoadAlgori
         stream: InputStream
     ) {
         cacheDir.mkdir()
+        if(cacheFile.exists()) cacheFile.delete()
         cacheFile.createNewFile()
         val oStream = cacheFile.outputStream()
         stream.use {

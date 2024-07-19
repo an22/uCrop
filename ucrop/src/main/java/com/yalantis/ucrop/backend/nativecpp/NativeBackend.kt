@@ -4,7 +4,6 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.RectF
 import android.net.Uri
-import android.os.Build
 import androidx.exifinterface.media.ExifInterface
 import com.yalantis.ucrop.backend.CropBackend
 import com.yalantis.ucrop.model.CropParameters
@@ -18,7 +17,6 @@ import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.round
-import android.os.FileUtils as AndroidFileUtils
 
 internal class NativeBackend : CropBackend {
 
@@ -39,8 +37,8 @@ internal class NativeBackend : CropBackend {
     ): ScaleInfo {
         val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(cropParameters.imageInputPath, options)
-        val shouldSwapSides =
-            cropParameters.exifInfo.exifDegrees == 90 || cropParameters.exifInfo.exifDegrees == 270
+        val exifInfo = cropParameters.exifInfo
+        val shouldSwapSides = exifInfo.exifDegrees == 90 || exifInfo.exifDegrees == 270
         val xSource = (if (shouldSwapSides) options.outHeight else options.outWidth)
         val ySource = (if (shouldSwapSides) options.outWidth else options.outHeight)
         var scaleX = xSource / viewBitmap.width.toFloat()
@@ -67,19 +65,17 @@ internal class NativeBackend : CropBackend {
         scaleInfo: ScaleInfo
     ): CropResult {
         val originalExif = ExifInterface(cropParameters.imageInputPath)
-        val cropOffsetX =
-            round((imageState.cropRect.left - imageState.cropRect.left) / scaleInfo.currentScale)
-        val cropOffsetY =
-            round((imageState.cropRect.top - imageState.cropRect.top) / scaleInfo.currentScale)
-        val croppedImageWidth = round(imageState.cropRect.width() / scaleInfo.currentScale).toInt()
-        val croppedImageHeight =
-            round(imageState.cropRect.height() / scaleInfo.currentScale).toInt()
+        val cropRect = imageState.cropRect
+        val cropOffsetX = round((cropRect.left - cropRect.left) / scaleInfo.currentScale)
+        val cropOffsetY = round((cropRect.top - cropRect.top) / scaleInfo.currentScale)
+        val croppedImageWidth = round(cropRect.width() / scaleInfo.currentScale).toInt()
+        val croppedImageHeight = round(cropRect.height() / scaleInfo.currentScale).toInt()
         val shouldCrop = shouldCrop(
             croppedImageWidth,
             croppedImageHeight,
             cropParameters.maxResultImageSizeX,
             cropParameters.maxResultImageSizeY,
-            imageState.cropRect,
+            cropRect,
             imageState.currentImageRect,
             imageState.currentAngle
         )
@@ -100,23 +96,25 @@ internal class NativeBackend : CropBackend {
             )
             if (cropped) {
                 ExifInterface(cropParameters.imageOutputPath)
-                copyExif
-                ImageHeaderParser.copyExif(
-                    originalExif,
-                    croppedImageWidth,
-                    croppedImageHeight,
-                    cropParameters.imageOutputPath
-                )
+                //TODO copy Exif
+//                cropParameters.exifInfo.exif
+//                ImageHeaderParser.copyExif(
+//                    originalExif,
+//                    croppedImageWidth,
+//                    croppedImageHeight,
+//                    cropParameters.imageOutputPath
+//                )
             }
         } else {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                AndroidFileUtils.copy(
-                    File(cropParameters.imageInputPath),
-                    File(cropParameters.imageOutputPath).outputStream()
-                )
-            } else {
-                FileUtils.copyFile(cropParameters.imageInputPath, cropParameters.imageOutputPath)
-            }
+            //TODO copy to file
+//            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+//                AndroidFileUtils.copy(
+//                    File(cropParameters.imageInputPath).inputStream(),
+//                    File(cropParameters.imageOutputPath).outputStream()
+//                )
+//            } else {
+//                FileUtils.copyFile(cropParameters.imageInputPath, cropParameters.imageOutputPath)
+//            }
         }
         return CropResult(
             Uri.fromFile(File(cropParameters.imageOutputPath)),

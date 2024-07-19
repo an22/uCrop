@@ -11,9 +11,9 @@ import android.view.Display
 import android.view.WindowManager
 import com.yalantis.ucrop.util.EglUtils
 import com.yalantis.ucrop.util.Logger
+import java.io.BufferedInputStream
 import java.io.FileNotFoundException
 import java.io.IOException
-import java.io.InputStream
 import kotlin.math.min
 import kotlin.math.sqrt
 
@@ -105,16 +105,18 @@ object BitmapLoadUtils {
 
     @Throws(FileNotFoundException::class, IOException::class)
     fun decodeSampledBitmapFromStream(
-        inputStream: InputStream,
+        inputStream: BufferedInputStream,
         reqWidth: Int,
         reqHeight: Int
     ): Bitmap {
+        inputStream.mark(64 * 1000) //64kb
         val options = BitmapFactory.Options().apply {
             inJustDecodeBounds = true
         }
         BitmapFactory.decodeStream(inputStream, null, options)
         options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight)
         options.inJustDecodeBounds = false
+        inputStream.reset()
         return BitmapFactory.decodeStream(inputStream, null, options)
             ?: throw IOException("Cannot decode stream: $inputStream")
     }
