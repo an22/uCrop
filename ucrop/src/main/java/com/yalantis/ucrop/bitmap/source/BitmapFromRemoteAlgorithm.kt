@@ -20,7 +20,7 @@ class BitmapFromRemoteAlgorithm(private val context: Context) : BitmapLoadAlgori
         val type = FileType.from(from)
         assert(type == FileType.REMOTE) { "This algorithm can't handle uri of $type" }
 
-        val response = UCropHttpClientStore.INSTANCE.client
+        val response = UCropHttpClientStore.client
             .newCall(
                 Request.Builder()
                     .url(from.toString())

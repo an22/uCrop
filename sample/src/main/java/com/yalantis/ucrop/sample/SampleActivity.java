@@ -35,8 +35,6 @@ import androidx.core.content.ContextCompat;
 import com.yalantis.ucrop.UCrop;
 import com.yalantis.ucrop.UCropActivity;
 import com.yalantis.ucrop.UCropFragment;
-import com.yalantis.ucrop.UCropFragmentCallback;
-import com.yalantis.ucrop.model.UCropResult;
 
 import java.io.File;
 import java.util.Locale;
@@ -45,7 +43,7 @@ import java.util.Random;
 /**
  * Created by Oleksii Shliama (https://github.com/shliama).
  */
-public class SampleActivity extends BaseActivity implements UCropFragmentCallback {
+public class SampleActivity extends BaseActivity {
 
     private static final String TAG = "SampleActivity";
 
@@ -311,6 +309,8 @@ public class SampleActivity extends BaseActivity implements UCropFragmentCallbac
 
         options.setHideBottomControls(mCheckBoxHideBottomControls.isChecked());
         options.setFreeStyleCropEnabled(mCheckBoxFreeStyleCrop.isChecked());
+        options.setDimmedLayerColor(0x4dffffff);
+        options.setCircleDimmedLayer(true);
 
         /*
         If you want to configure how gestures work for all UCropActivity tabs
@@ -384,24 +384,24 @@ public class SampleActivity extends BaseActivity implements UCropFragmentCallbac
         }
     }
 
-    @Override
-    public void loadingProgress(boolean showLoader) {
-        mShowLoader = showLoader;
-        supportInvalidateOptionsMenu();
-    }
-
-    @Override
-    public void onCropFinish(UCropResult result) {
-        switch (result.getResultCode()) {
-            case RESULT_OK:
-                handleCropResult(result.getResultData());
-                break;
-            case UCrop.RESULT_ERROR:
-                handleCropError(result.getResultData());
-                break;
-        }
-        removeFragmentFromScreen();
-    }
+//    @Override
+//    public void loadingProgress(boolean showLoader) {
+//        mShowLoader = showLoader;
+//        supportInvalidateOptionsMenu();
+//    }
+//
+//    @Override
+//    public void onCropFinish(UCropResult result) {
+//        switch (result.getResultCode()) {
+//            case RESULT_OK:
+//                handleCropResult(result.getResultData());
+//                break;
+//            case UCrop.RESULT_ERROR:
+//                handleCropError(result.getResultData());
+//                break;
+//        }
+//        removeFragmentFromScreen();
+//    }
 
     public void removeFragmentFromScreen() {
         getSupportFragmentManager().beginTransaction()

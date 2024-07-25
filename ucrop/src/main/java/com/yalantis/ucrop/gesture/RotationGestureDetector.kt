@@ -1,5 +1,6 @@
 package com.yalantis.ucrop.gesture
 
+import android.graphics.PointF
 import android.view.MotionEvent
 import java.lang.Math.toDegrees
 import kotlin.math.atan2
@@ -17,6 +18,7 @@ class RotationGestureDetector(
     private var isFirstTouch = false
     var angle: Float = 0f
         private set
+    var touchCenter: PointF = PointF()
 
     init {
         pointerIndex1 = INVALID_POINTER_INDEX
@@ -46,6 +48,9 @@ class RotationGestureDetector(
                 val nsY = event.getY(pointerIndex1)
                 val nfX = event.getX(pointerIndex2)
                 val nfY = event.getY(pointerIndex2)
+
+                touchCenter.x = (event.getX(pointerIndex1) + event.getX(pointerIndex2)) / 2
+                touchCenter.y = (event.getY(pointerIndex1) + event.getY(pointerIndex2)) / 2
 
                 if (isFirstTouch) {
                     angle = 0f

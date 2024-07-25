@@ -4,8 +4,8 @@ import android.view.GestureDetector.SimpleOnGestureListener
 import android.view.MotionEvent
 
 class KotlinOnGestureListener(
-    private val onScroll: ((MotionEvent?, MotionEvent, Float, Float) -> Unit)? = null,
-    private val onDoubleTap: ((MotionEvent) -> Unit)? = null
+    private val onScroll: ((MotionEvent?, MotionEvent, Float, Float) -> Boolean)? = null,
+    private val onDoubleTap: ((MotionEvent) -> Boolean)? = null
 ) : SimpleOnGestureListener() {
 
     override fun onScroll(
@@ -14,12 +14,10 @@ class KotlinOnGestureListener(
         distanceX: Float,
         distanceY: Float
     ): Boolean {
-        onScroll?.invoke(e1, e2, distanceX, distanceY)
-        return super.onScroll(e1, e2, distanceX, distanceY)
+        return onScroll?.invoke(e1, e2, distanceX, distanceY)?: super.onScroll(e1, e2, distanceX, distanceY)
     }
 
     override fun onDoubleTap(e: MotionEvent): Boolean {
-        onDoubleTap?.invoke(e)
-        return super.onDoubleTap(e)
+        return onDoubleTap?.invoke(e) ?: super.onDoubleTap(e)
     }
 }

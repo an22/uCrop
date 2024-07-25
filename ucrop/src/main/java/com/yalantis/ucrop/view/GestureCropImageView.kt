@@ -4,76 +4,87 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Matrix
-import android.graphics.Rect
+import android.graphics.PointF
+import android.graphics.drawable.Drawable
 import android.util.AttributeSet
-import android.view.GestureDetector
 import android.view.MotionEvent
-import android.view.ScaleGestureDetector
+import android.view.animation.AccelerateDecelerateInterpolator
 import androidx.appcompat.widget.AppCompatImageView
-import androidx.core.graphics.values
-import com.yalantis.ucrop.gesture.RotationGestureDetector
+import androidx.core.graphics.toRectF
+import com.yalantis.ucrop.model.CropStyleMode
+import com.yalantis.ucrop.util.ImageGestureManager
 import com.yalantis.ucrop.util.Logger
-import com.yalantis.ucrop.view.adapter.KotlinOnGestureListener
-import com.yalantis.ucrop.view.adapter.KotlinOnRotateListener
-import com.yalantis.ucrop.view.adapter.KotlinOnScaleListener
+import com.yalantis.ucrop.util.MatrixAnimator
+import com.yalantis.ucrop.util.RectangleAligner
 import com.yalantis.ucrop.view.drawable.CropOverlayDrawable
+import com.yalantis.ucrop.view.drawable.CropOverlayDrawable.ElementConfig
 
-/**
- * Created by Oleksii Shliama (https://github.com/shliama).
- */
 open class GestureCropImageView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyle: Int = 0
 ) : AppCompatImageView(context, attrs, defStyle) {
 
-    private val mScaleDetector = ScaleGestureDetector(context, KotlinOnScaleListener(onScale = {
-        drawMatrix.postScale(it.scaleFactor, it.scaleFactor, touchCenterX, touchCenterY)
-        imageMatrix = drawMatrix
-        true
-    }))
-    private val mRotateDetector = RotationGestureDetector(KotlinOnRotateListener(onRotation = {
-        drawMatrix.postRotate(it.angle, touchCenterX, touchCenterY)
-        imageMatrix = drawMatrix
-        true
-    }))
-    private val mGestureDetector = GestureDetector(context, KotlinOnGestureListener(
-        onScroll = { _, _, distanceX: Float, distanceY: Float ->
-            drawMatrix.postTranslate(-distanceX, -distanceY)
-            imageMatrix = drawMatrix
-        },
-        onDoubleTap = {
-            val scaleFactor = DOUBLE_TAP_SCALE_FACTOR
-            drawMatrix.postTranslate((width / 2f) - it.x, (height / 2f) - it.y)
-            drawMatrix.postScale(scaleFactor, scaleFactor, width / 2f, height / 2f)
-            imageMatrix = drawMatrix
-//            zoomImageToPosition(
-//                doubleTapTargetScale,
-//                it.x,
-//                it.y,
-//                DOUBLE_TAP_ZOOM_DURATION.toLong()
-//            )
-        }
-    ), null, true)
-
-    var isRotateEnabled: Boolean = true
-    var isScaleEnabled: Boolean = true
-    var isGestureEnabled: Boolean = true
-    var doubleTapScaleSteps: Int = 5
-
-    private var touchCenterX = 0f
-    private var touchCenterY = 0f
-
     private val drawMatrix = Matrix()
     private var bitmapSourceBounds = FloatArray(8)
     private val bitmapActualBounds = FloatArray(8)
-    private val overlayDrawable = CropOverlayDrawable()
+    private val overlayDrawable = CropOverlayDrawable(context)
+    private val rectangleAligner = RectangleAligner()
+    private val matrixAnimator = MatrixAnimator()
+    private val imageGestureManager = ImageGestureManager(
+        context = context,
+        drawMatrix = drawMatrix,
+        matrixAnimator = matrixAnimator,
+        onImageMatrixChanged = ::setImageMatrix
+    )
+
+    var isRotateEnabled: Boolean by imageGestureManager::isRotateEnabled
+    var isScaleEnabled: Boolean by imageGestureManager::isScaleEnabled
+    var isGestureEnabled: Boolean by imageGestureManager::isGestureEnabled
+    var imageToCropBoundsAnimDuration: Long = DEFAULT_IMAGE_TO_CROP_BOUNDS_ANIM_DURATION
+    var maxScaleMultiplier: Float by imageGestureManager::maxScaleFactor
+    var doubleTapAnimDuration: Long by imageGestureManager::doubleTapZoomDuration
+    var dimColor: Int by overlayDrawable::dimColor
+    var cropAreaMode: CropOverlayDrawable.CropAreaMode by overlayDrawable::cropAreaMode
+    var shouldDrawOverlay: Boolean by overlayDrawable::shouldDrawOverlay
+    var gridColumnCount:Int by overlayDrawable::gridColumnCount
+    var gridRowCount:Int by overlayDrawable::gridRowCount
+    var frameConfig: ElementConfig by overlayDrawable::frameConfig
+    var frameCornerConfig: ElementConfig by overlayDrawable::cornerConfig
+    var frameGridConfig: ElementConfig by overlayDrawable::gridConfig
+    var aspectRatio: Float by overlayDrawable::aspectRatio
+    var isFreestyleCrop: Boolean
+        get() = overlayDrawable.cropStyleMode == CropStyleMode.FREESTYLE
+        set(value) {
+            overlayDrawable.cropStyleMode = when(value) {
+                true -> CropStyleMode.FREESTYLE_ALLOW_SCROLL_TRANSLATE
+                else -> CropStyleMode.STATIC
+            }
+        }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        overlayDrawable.callback = this
+    }
+
+    override fun onDetachedFromWindow() {
+        overlayDrawable.callback = null
+        super.onDetachedFromWindow()
+    }
+
+    override fun invalidateDrawable(dr: Drawable) {
+        if (dr == overlayDrawable) {
+            invalidate()
+        } else {
+            super.invalidateDrawable(dr)
+        }
+    }
 
     override fun setImageBitmap(bm: Bitmap?) {
         scaleType = ScaleType.FIT_CENTER
         super.setImageBitmap(bm)
         scaleType = ScaleType.MATRIX
-        drawMatrix.setValues(imageMatrix.values())
+        drawMatrix.set(imageMatrix)
         bitmapSourceBounds[0] = 0f
         bitmapSourceBounds[1] = 0f
 
@@ -87,14 +98,15 @@ open class GestureCropImageView @JvmOverloads constructor(
         bitmapSourceBounds[7] = drawable.intrinsicHeight.toFloat()
 
         bitmapSourceBounds.copyInto(bitmapActualBounds)
-
         drawMatrix.mapPoints(bitmapActualBounds)
+
+        wrapCropBounds(animate = false)
+        imageGestureManager.invalidateScaleRange()
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        overlayDrawable.setBounds(0, 0, w, w)
-        overlayDrawable.setClipAreaBounds(Rect(50, 50, w - 50, h - 50))
+        overlayDrawable.setBounds(paddingLeft, paddingTop, w - paddingRight, h - paddingBottom)
     }
 
     override fun setImageMatrix(matrix: Matrix?) {
@@ -110,49 +122,40 @@ open class GestureCropImageView @JvmOverloads constructor(
      * Pass the event to the gesture detectors if those are enabled.
      */
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        if ((event.action and MotionEvent.ACTION_MASK) == MotionEvent.ACTION_DOWN) {
-//            cancelAllAnimations()
+        when ((event.action and MotionEvent.ACTION_MASK)) {
+            MotionEvent.ACTION_DOWN -> matrixAnimator.cancelAnimations()
+            MotionEvent.ACTION_UP -> wrapCropBounds(animate = true)
         }
-
-        if (event.pointerCount > 1) {
-            touchCenterX = (event.getX(0) + event.getX(1)) / 2
-            touchCenterY = (event.getY(0) + event.getY(1)) / 2
-        }
-
-        if (isGestureEnabled) {
-            mGestureDetector.onTouchEvent(event)
-        }
-
-        if (isScaleEnabled) {
-            mScaleDetector.onTouchEvent(event)
-        }
-
-        if (isRotateEnabled) {
-            mRotateDetector.onTouchEvent(event)
-        }
-
-        if ((event.action and MotionEvent.ACTION_MASK) == MotionEvent.ACTION_UP) {
-            wrapCropBounds()
+        if(!overlayDrawable.onTouchEvent(event)) {
+            imageGestureManager.onTouchEvent(event)
         }
         return true
     }
 
-    private fun wrapCropBounds() {
-        val cropBounds = overlayDrawable.cropAreaRect
-
-        var scaleFactor = 1f
-        var shouldScale = false
-        for(i in bitmapActualBounds.indices step 2) {
-            val x = bitmapActualBounds[i]
-            val y = bitmapActualBounds[i + 1]
-
-            if(!cropBounds.contains(x.toInt(), y.toInt())) {
-                shouldScale = true
-                break
+    private fun wrapCropBounds(animate: Boolean) {
+        val result = rectangleAligner.align(
+            outRect = bitmapActualBounds,
+            inRect = overlayDrawable.cropAreaRect,
+            sourceRotationAngle = imageGestureManager.currentRotationAngle
+        )
+        if (result.transformationMatrix.isIdentity) return
+        if (animate) {
+            val bounds = overlayDrawable.cropAreaRect.toRectF()
+            val scalePointF = PointF(bounds.centerX(), bounds.centerY())
+            matrixAnimator.animate(
+                matrix = drawMatrix,
+                scalePoint = scalePointF,
+                translateDelta = result.translate,
+                scaleOn = result.scale,
+                interpolator = AccelerateDecelerateInterpolator(),
+                durationMs = DEFAULT_IMAGE_TO_CROP_BOUNDS_ANIM_DURATION
+            ) {
+                drawMatrix.set(it)
+                imageMatrix = drawMatrix
             }
-        }
-        if(shouldScale) {
-
+        } else {
+            drawMatrix.postConcat(result.transformationMatrix)
+            imageMatrix = drawMatrix
         }
     }
 
@@ -173,8 +176,7 @@ open class GestureCropImageView @JvmOverloads constructor(
     }
 
     companion object {
-        private const val DOUBLE_TAP_ZOOM_DURATION = 200
-        private const val DOUBLE_TAP_SCALE_FACTOR = 1.5f
+        private const val DEFAULT_IMAGE_TO_CROP_BOUNDS_ANIM_DURATION = 500L
         private const val TAG = "CropImageView"
     }
 }

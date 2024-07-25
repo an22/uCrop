@@ -191,6 +191,15 @@ class UCrop private constructor(source: Uri, destination: Uri) {
         }
 
         /**
+         * This method sets animation duration for double tap gesture
+         *
+         * @param durationMillis - duration in milliseconds
+         */
+        fun setDoubleTapAnimDuration(@IntRange(from = MIN_SIZE.toLong()) durationMillis: Int) {
+            optionBundle.putInt(EXTRA_DOUBLE_TAP_ANIM_DURATION, durationMillis)
+        }
+
+        /**
          * Setter for max size for both width and height of bitmap that will be decoded from an input Uri and used in the view.
          *
          * @param maxBitmapSize - size in pixels
@@ -409,55 +418,48 @@ class UCrop private constructor(source: Uri, destination: Uri) {
         }
 
         companion object {
-            const val EXTRA_COMPRESSION_FORMAT_NAME: String = "$EXTRA_PREFIX.CompressionFormatName"
-            const val EXTRA_COMPRESSION_QUALITY: String = "$EXTRA_PREFIX.CompressionQuality"
+            const val EXTRA_COMPRESSION_FORMAT_NAME = "$EXTRA_PREFIX.CompressionFormatName"
+            const val EXTRA_COMPRESSION_QUALITY = "$EXTRA_PREFIX.CompressionQuality"
 
-            const val EXTRA_ALLOWED_GESTURES: String = "$EXTRA_PREFIX.AllowedGestures"
+            const val EXTRA_ALLOWED_GESTURES = "$EXTRA_PREFIX.AllowedGestures"
 
-            const val EXTRA_MAX_BITMAP_SIZE: String = "$EXTRA_PREFIX.MaxBitmapSize"
-            const val EXTRA_MAX_SCALE_MULTIPLIER: String = "$EXTRA_PREFIX.MaxScaleMultiplier"
-            const val EXTRA_IMAGE_TO_CROP_BOUNDS_ANIM_DURATION: String =
-                "$EXTRA_PREFIX.ImageToCropBoundsAnimDuration"
+            const val EXTRA_MAX_BITMAP_SIZE = "$EXTRA_PREFIX.MaxBitmapSize"
+            const val EXTRA_MAX_SCALE_MULTIPLIER = "$EXTRA_PREFIX.MaxScaleMultiplier"
+            const val EXTRA_IMAGE_TO_CROP_BOUNDS_ANIM_DURATION = "$EXTRA_PREFIX.ImageToCropBoundsAnimDuration"
+            const val EXTRA_DOUBLE_TAP_ANIM_DURATION = "$EXTRA_PREFIX.DoubleTapAnimDuration"
 
-            const val EXTRA_DIMMED_LAYER_COLOR: String = "$EXTRA_PREFIX.DimmedLayerColor"
-            const val EXTRA_CIRCLE_DIMMED_LAYER: String = "$EXTRA_PREFIX.CircleDimmedLayer"
+            const val EXTRA_DIMMED_LAYER_COLOR = "$EXTRA_PREFIX.DimmedLayerColor"
+            const val EXTRA_CIRCLE_DIMMED_LAYER = "$EXTRA_PREFIX.CircleDimmedLayer"
 
-            const val EXTRA_SHOW_CROP_FRAME: String = "$EXTRA_PREFIX.ShowCropFrame"
-            const val EXTRA_CROP_FRAME_COLOR: String = "$EXTRA_PREFIX.CropFrameColor"
-            const val EXTRA_CROP_FRAME_STROKE_WIDTH: String = "$EXTRA_PREFIX.CropFrameStrokeWidth"
+            const val EXTRA_SHOW_CROP_FRAME = "$EXTRA_PREFIX.ShowCropFrame"
+            const val EXTRA_CROP_FRAME_COLOR = "$EXTRA_PREFIX.CropFrameColor"
+            const val EXTRA_CROP_FRAME_STROKE_WIDTH = "$EXTRA_PREFIX.CropFrameStrokeWidth"
 
-            const val EXTRA_SHOW_CROP_GRID: String = "$EXTRA_PREFIX.ShowCropGrid"
-            const val EXTRA_CROP_GRID_ROW_COUNT: String = "$EXTRA_PREFIX.CropGridRowCount"
-            const val EXTRA_CROP_GRID_COLUMN_COUNT: String = "$EXTRA_PREFIX.CropGridColumnCount"
-            const val EXTRA_CROP_GRID_COLOR: String = "$EXTRA_PREFIX.CropGridColor"
-            const val EXTRA_CROP_GRID_CORNER_COLOR: String = "$EXTRA_PREFIX.CropGridCornerColor"
-            const val EXTRA_CROP_GRID_STROKE_WIDTH: String = "$EXTRA_PREFIX.CropGridStrokeWidth"
+            const val EXTRA_SHOW_CROP_GRID = "$EXTRA_PREFIX.ShowCropGrid"
+            const val EXTRA_CROP_GRID_ROW_COUNT = "$EXTRA_PREFIX.CropGridRowCount"
+            const val EXTRA_CROP_GRID_COLUMN_COUNT = "$EXTRA_PREFIX.CropGridColumnCount"
+            const val EXTRA_CROP_GRID_COLOR = "$EXTRA_PREFIX.CropGridColor"
+            const val EXTRA_CROP_GRID_CORNER_COLOR = "$EXTRA_PREFIX.CropGridCornerColor"
+            const val EXTRA_CROP_GRID_STROKE_WIDTH = "$EXTRA_PREFIX.CropGridStrokeWidth"
 
-            const val EXTRA_TOOL_BAR_COLOR: String = "$EXTRA_PREFIX.ToolbarColor"
-            const val EXTRA_STATUS_BAR_COLOR: String = "$EXTRA_PREFIX.StatusBarColor"
-            const val EXTRA_UCROP_COLOR_CONTROLS_WIDGET_ACTIVE: String =
-                "$EXTRA_PREFIX.UcropColorControlsWidgetActive"
+            const val EXTRA_TOOL_BAR_COLOR = "$EXTRA_PREFIX.ToolbarColor"
+            const val EXTRA_STATUS_BAR_COLOR = "$EXTRA_PREFIX.StatusBarColor"
+            const val EXTRA_UCROP_COLOR_CONTROLS_WIDGET_ACTIVE = "$EXTRA_PREFIX.UcropColorControlsWidgetActive"
 
-            const val EXTRA_UCROP_WIDGET_COLOR_TOOLBAR: String =
-                "$EXTRA_PREFIX.UcropToolbarWidgetColor"
-            const val EXTRA_UCROP_TITLE_TEXT_TOOLBAR: String =
-                "$EXTRA_PREFIX.UcropToolbarTitleText"
-            const val EXTRA_UCROP_WIDGET_CANCEL_DRAWABLE: String =
-                "$EXTRA_PREFIX.UcropToolbarCancelDrawable"
-            const val EXTRA_UCROP_WIDGET_CROP_DRAWABLE: String =
-                "$EXTRA_PREFIX.UcropToolbarCropDrawable"
+            const val EXTRA_UCROP_WIDGET_COLOR_TOOLBAR = "$EXTRA_PREFIX.UcropToolbarWidgetColor"
+            const val EXTRA_UCROP_TITLE_TEXT_TOOLBAR = "$EXTRA_PREFIX.UcropToolbarTitleText"
+            const val EXTRA_UCROP_WIDGET_CANCEL_DRAWABLE = "$EXTRA_PREFIX.UcropToolbarCancelDrawable"
+            const val EXTRA_UCROP_WIDGET_CROP_DRAWABLE = "$EXTRA_PREFIX.UcropToolbarCropDrawable"
 
-            const val EXTRA_UCROP_LOGO_COLOR: String = "$EXTRA_PREFIX.UcropLogoColor"
+            const val EXTRA_UCROP_LOGO_COLOR = "$EXTRA_PREFIX.UcropLogoColor"
 
-            const val EXTRA_HIDE_BOTTOM_CONTROLS: String = "$EXTRA_PREFIX.HideBottomControls"
-            const val EXTRA_FREE_STYLE_CROP: String = "$EXTRA_PREFIX.FreeStyleCrop"
+            const val EXTRA_HIDE_BOTTOM_CONTROLS = "$EXTRA_PREFIX.HideBottomControls"
+            const val EXTRA_FREE_STYLE_CROP = "$EXTRA_PREFIX.FreeStyleCrop"
 
-            const val EXTRA_ASPECT_RATIO_SELECTED_BY_DEFAULT: String =
-                "$EXTRA_PREFIX.AspectRatioSelectedByDefault"
-            const val EXTRA_ASPECT_RATIO_OPTIONS: String = "$EXTRA_PREFIX.AspectRatioOptions"
+            const val EXTRA_ASPECT_RATIO_SELECTED_BY_DEFAULT = "$EXTRA_PREFIX.AspectRatioSelectedByDefault"
+            const val EXTRA_ASPECT_RATIO_OPTIONS = "$EXTRA_PREFIX.AspectRatioOptions"
 
-            const val EXTRA_UCROP_ROOT_VIEW_BACKGROUND_COLOR: String =
-                "$EXTRA_PREFIX.UcropRootViewBackgroundColor"
+            const val EXTRA_UCROP_ROOT_VIEW_BACKGROUND_COLOR = "$EXTRA_PREFIX.UcropRootViewBackgroundColor"
         }
     }
 
@@ -469,20 +471,20 @@ class UCrop private constructor(source: Uri, destination: Uri) {
 
         private const val EXTRA_PREFIX = BuildConfig.LIBRARY_PACKAGE_NAME
 
-        const val EXTRA_INPUT_URI: String = "$EXTRA_PREFIX.InputUri"
-        const val EXTRA_OUTPUT_URI: String = "$EXTRA_PREFIX.OutputUri"
-        const val EXTRA_OUTPUT_CROP_ASPECT_RATIO: String = "$EXTRA_PREFIX.CropAspectRatio"
-        const val EXTRA_OUTPUT_IMAGE_WIDTH: String = "$EXTRA_PREFIX.ImageWidth"
-        const val EXTRA_OUTPUT_IMAGE_HEIGHT: String = "$EXTRA_PREFIX.ImageHeight"
-        const val EXTRA_OUTPUT_OFFSET_X: String = "$EXTRA_PREFIX.OffsetX"
-        const val EXTRA_OUTPUT_OFFSET_Y: String = "$EXTRA_PREFIX.OffsetY"
-        const val EXTRA_ERROR: String = "$EXTRA_PREFIX.Error"
+        const val EXTRA_INPUT_URI = "$EXTRA_PREFIX.InputUri"
+        const val EXTRA_OUTPUT_URI = "$EXTRA_PREFIX.OutputUri"
+        const val EXTRA_OUTPUT_CROP_ASPECT_RATIO = "$EXTRA_PREFIX.CropAspectRatio"
+        const val EXTRA_OUTPUT_IMAGE_WIDTH = "$EXTRA_PREFIX.ImageWidth"
+        const val EXTRA_OUTPUT_IMAGE_HEIGHT = "$EXTRA_PREFIX.ImageHeight"
+        const val EXTRA_OUTPUT_OFFSET_X = "$EXTRA_PREFIX.OffsetX"
+        const val EXTRA_OUTPUT_OFFSET_Y = "$EXTRA_PREFIX.OffsetY"
+        const val EXTRA_ERROR = "$EXTRA_PREFIX.Error"
 
-        const val EXTRA_ASPECT_RATIO_X: String = "$EXTRA_PREFIX.AspectRatioX"
-        const val EXTRA_ASPECT_RATIO_Y: String = "$EXTRA_PREFIX.AspectRatioY"
+        const val EXTRA_ASPECT_RATIO_X = "$EXTRA_PREFIX.AspectRatioX"
+        const val EXTRA_ASPECT_RATIO_Y = "$EXTRA_PREFIX.AspectRatioY"
 
-        const val EXTRA_MAX_SIZE_X: String = "$EXTRA_PREFIX.MaxSizeX"
-        const val EXTRA_MAX_SIZE_Y: String = "$EXTRA_PREFIX.MaxSizeY"
+        const val EXTRA_MAX_SIZE_X = "$EXTRA_PREFIX.MaxSizeX"
+        const val EXTRA_MAX_SIZE_Y = "$EXTRA_PREFIX.MaxSizeY"
 
         /**
          * This method creates new Intent builder and sets both source and destination image URIs.

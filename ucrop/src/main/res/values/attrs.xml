@@ -1,6 +1,6 @@
 <resources>
 
-    <declare-styleable name="ucrop_UCropView">
+    <declare-styleable name="ucrop_GestureCropImageView">
 
         <!--Crop image view-->
         <attr name="ucrop_aspect_ratio_x" format="float"/>

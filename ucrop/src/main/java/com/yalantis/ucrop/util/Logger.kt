@@ -3,7 +3,7 @@ package com.yalantis.ucrop.util
 import android.util.Log
 import com.yalantis.ucrop.BuildConfig
 
-object Logger {
+internal object Logger {
     fun d(tag: String, message: String, vararg args: Any) {
         if (BuildConfig.DEBUG) {
             Log.d(tag, message)

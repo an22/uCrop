@@ -1,5 +1,7 @@
 package com.yalantis.ucrop.util
 
+import android.graphics.Point
+import android.graphics.Rect
 import android.graphics.RectF
 import kotlin.math.pow
 import kotlin.math.sqrt
@@ -26,6 +28,37 @@ internal object RectUtils {
             r.right, r.bottom,
             r.left, r.bottom
         )
+    }
+
+    /**
+     * Gets a rect and fills array of points with coordinates ot corners.
+     * The order of the corners in the float array is:
+     * 0------->1
+     * ^        |
+     * |        |
+     * |        v
+     * 3<-------2
+     *
+     * @param r the rectangle to get the corners of
+     * @param outArray out array of corner points
+     */
+    @JvmStatic
+    fun fillPointsFromRect(r: Rect, outArray: Array<Point>) {
+        //Top left
+        outArray[0].x = r.left
+        outArray[0].y = r.top
+
+        //Top right
+        outArray[1].x = r.right
+        outArray[1].y = r.top
+
+        //Bottom right
+        outArray[2].x = r.right
+        outArray[2].y = r.bottom
+
+        //Bottom left
+        outArray[3].x = r.left
+        outArray[3].y = r.bottom
     }
 
     /**
